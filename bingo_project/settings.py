@@ -54,7 +54,7 @@ INSTALLED_APPS = [
 
 ASGI_APPLICATION = 'bingo_project.asgi.application'
 
-
+redis_url = os.environ.get("REDIS_URL")
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
