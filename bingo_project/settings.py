@@ -53,14 +53,27 @@ INSTALLED_APPS = [
 
 ASGI_APPLICATION = 'bingo_project.asgi.application'
 
+
+redis_url = os.environ.get("REDIS_URL", "redis://127.0.0.1:6379")
+parsed_url = urllib.parse.urlparse(redis_url)
+
 CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            "hosts": [('127.0.0.1', 6379)],
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [(parsed_url.hostname, parsed_url.port)],
         },
     },
 }
+
+#CHANNEL_LAYERS = {
+#    'default': {
+#        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+#        'CONFIG': {
+#            "hosts": [('127.0.0.1', 6379)],
+#        },
+#    },
+#}
 
 
 
