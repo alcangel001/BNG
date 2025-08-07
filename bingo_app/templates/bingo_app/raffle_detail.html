@@ -1,0 +1,552 @@
+{% extends "bingo_app/base.html" %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --secondary-gradient: linear-gradient(135deg, #28a745, #218838);
+        --accent-gradient: linear-gradient(135deg, #ffc107, #ffca2c);
+        --dark-color: #2c3e50;
+        --light-color: #f8f9fa;
+    }
+    
+    .raffle-header {
+        background: var(--primary-gradient);
+        color: white;
+        padding: 3rem 0;
+        margin-bottom: 2rem;
+        border-radius: 0 0 20px 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .raffle-header::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('https://images.unsplash.com/photo-1635070041078-e363dbe005cb?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80') center/cover;
+        opacity: 0.15;
+        z-index: 0;
+    }
+    
+    .raffle-card {
+        border-radius: 20px;
+        border: none;
+        box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+        overflow: hidden;
+        margin-bottom: 3rem;
+        background: white;
+    }
+    
+    .card-header {
+        background: var(--primary-gradient) !important;
+        border-bottom: none !important;
+        padding: 2rem !important;
+        position: relative;
+    }
+    
+    .card-body {
+        padding: 2.5rem;
+    }
+    
+    .card-footer {
+        background: var(--light-color);
+        border-top: none !important;
+        padding: 1.5rem 2.5rem !important;
+    }
+    
+    .ticket-grid {
+        display: grid;
+        grid-template-columns: repeat(10, 1fr);
+        gap: 12px;
+        margin: 2rem 0;
+    }
+    
+    .ticket-number {
+        padding: 1rem 0.5rem;
+        text-align: center;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        font-weight: 600;
+        position: relative;
+        overflow: hidden;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .ticket-available {
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+    }
+    
+    .ticket-available:hover {
+        background: linear-gradient(135deg, #e9ecef, #dee2e6);
+        transform: translateY(-5px) scale(1.1);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        z-index: 1;
+    }
+    
+    .ticket-sold {
+        background: linear-gradient(135deg, #d1e7dd, #a3cfbb);
+        cursor: not-allowed;
+        color: #0f5132;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+    }
+    
+    .ticket-mine {
+        background: var(--primary-gradient);
+        color: white;
+        font-weight: bold;
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .ticket-winning {
+        background: var(--accent-gradient);
+        font-weight: bold;
+        color: var(--dark-color);
+        animation: pulse 2s infinite;
+        box-shadow: 0 5px 15px rgba(255, 193, 7, 0.4);
+    }
+    
+    .progress-container {
+        height: 30px;
+        margin: 2rem 0;
+        border-radius: 15px;
+        overflow: hidden;
+        background-color: #f8f9fa;
+        box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
+        position: relative;
+    }
+    
+    .progress-bar {
+        height: 100%;
+        background: var(--secondary-gradient);
+        transition: width 0.8s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .progress-bar::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(90deg, 
+                      rgba(255,255,255,0) 0%, 
+                      rgba(255,255,255,0.3) 50%, 
+                      rgba(255,255,255,0) 100%);
+        animation: shimmer 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4); }
+        70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(255, 193, 7, 0); }
+        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+    }
+    
+    @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+    
+    .status-badge {
+        font-size: 1rem;
+        padding: 0.8rem 1.5rem;
+        border-radius: 50px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    }
+    
+    .status-waiting {
+        background: linear-gradient(135deg, #6c757d, #5a6268);
+        color: white;
+    }
+    
+    .status-in_progress {
+        background: linear-gradient(135deg, #0d6efd, #0b5ed7);
+        color: white;
+    }
+    
+    .status-finished {
+        background: linear-gradient(135deg, #198754, #157347);
+        color: white;
+    }
+    
+    .user-tickets {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin: 2rem 0;
+    }
+    
+    .user-ticket {
+        padding: 0.8rem 1.5rem;
+        border-radius: 50px;
+        font-weight: 600;
+        transition: all 0.3s;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    }
+    
+    .user-ticket-normal {
+        background: var(--primary-gradient);
+        color: white;
+    }
+    
+    .user-ticket-winning {
+        background: var(--accent-gradient);
+        color: var(--dark-color);
+        animation: pulse 2s infinite;
+        box-shadow: 0 5px 15px rgba(255, 193, 7, 0.4);
+    }
+    
+    .prize-highlight {
+        font-size: 1.3rem;
+        color: var(--dark-color);
+        font-weight: 700;
+        background: var(--accent-gradient);
+        padding: 0.3rem 1rem;
+        border-radius: 50px;
+        display: inline-block;
+    }
+    
+    .info-item {
+        padding: 1rem 0;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: #000;
+    }
+    
+    .info-item:last-child {
+        border-bottom: none;
+    }
+    
+    .alert-winner {
+        background: linear-gradient(135deg, #fff3cd, #ffecb5);
+        border: none;
+        color: #664d03;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    }
+    
+    .icon-circle {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1.5rem;
+    }
+    
+    .btn-action {
+        border-radius: 50px;
+        font-weight: 600;
+        padding: 0.8rem 2rem;
+        transition: all 0.3s;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        letter-spacing: 0.5px;
+    }
+    
+    .btn-action:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+
+    /* Nuevos estilos añadidos */
+    .card-body h4 {
+        color: #000;
+    }
+    
+    .alert-info span {
+        color: #000;
+    }
+    
+    .alert-warning span {
+        color: #000;
+    }
+    
+    /* Responsive */
+    @media (max-width: 992px) {
+        .ticket-grid {
+            grid-template-columns: repeat(5, 1fr);
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .raffle-header {
+            padding: 2rem 0;
+        }
+        
+        .card-body {
+            padding: 1.5rem;
+        }
+        
+        .ticket-number {
+            padding: 0.8rem 0.3rem;
+            font-size: 0.9rem;
+        }
+        
+        .info-item {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .icon-circle {
+            width: 40px;
+            height: 40px;
+            margin-right: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="raffle-header">
+    <div class="container position-relative" style="z-index: 1;">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <div>
+                <h1 class="mb-2">{{ raffle.title }}</h1>
+                <p class="lead mb-0 opacity-85">{{ raffle.description|default:"Participa por emocionantes premios" }}</p>
+            </div>
+            <span class="status-badge status-{{ raffle.status|lower }}">
+                {{ raffle.get_status_display }}
+            </span>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="raffle-card">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="mb-4">
+                        <h4 class="mb-4"><i class="fas fa-info-circle me-2"></i>Información de la Rifa</h4>
+                        
+                        <div class="info-item">
+                            <span><i class="fas fa-user me-2"></i>Organizador</span>
+                            <strong>{{ raffle.organizer.username }}</strong>
+                        </div>
+                        
+                        <div class="info-item">
+                            <span><i class="fas fa-tag me-2"></i>Precio por ticket</span>
+                            <strong>{{ raffle.ticket_price }} <i class="fas fa-coins"></i></strong>
+                        </div>
+                        
+                        <div class="info-item">
+                            <span><i class="fas fa-trophy me-2"></i>Premio principal</span>
+                            <strong class="prize-highlight">{{ raffle.prize }} <i class="fas fa-coins"></i></strong>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="mb-4">
+                        <h4 class="mb-4"><i class="fas fa-chart-bar me-2"></i>Estadísticas</h4>
+                        
+                        <div class="info-item">
+                            <span><i class="fas fa-hashtag me-2"></i>Rango de números</span>
+                            <strong>{{ raffle.start_number }} - {{ raffle.end_number }}</strong>
+                        </div>
+                        
+                        <div class="info-item">
+                            <span><i class="fas fa-ticket-alt me-2"></i>Tickets vendidos</span>
+                            <strong>{{ raffle.tickets.count }}/{{ raffle.total_tickets }}</strong>
+                        </div>
+                        
+                        <div class="info-item">
+                            <span><i class="fas fa-calendar-alt me-2"></i>Fecha del sorteo</span>
+                            <strong>{{ raffle.draw_date|date:"d M Y H:i" }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Progress Bar -->
+            <div class="progress-container">
+                <div class="progress-bar" 
+                     style="width: {{ raffle.progress_percentage }}%" 
+                     aria-valuenow="{{ raffle.progress_percentage }}" 
+                     aria-valuemin="0" 
+                     aria-valuemax="100">
+                    {{ raffle.progress_percentage|floatformat:0 }}% completado
+                </div>
+            </div>
+            
+            <!-- Winner Announcement -->
+            {% if raffle.status == 'FINISHED' and raffle.winner %}
+            <div class="alert-winner alert mb-5">
+                <div class="d-flex align-items-center">
+                    <div class="icon-circle">
+                        <i class="fas fa-trophy text-warning"></i>
+                    </div>
+                    <div>
+                        <h4 class="mb-2">¡Tenemos un ganador!</h4>
+                        <p class="mb-1">
+                            <strong>{{ raffle.winner.username }}</strong> con el ticket #{{ raffle.winning_number }}
+                            <span class="prize-highlight ms-3">{{ raffle.prize }} <i class="fas fa-coins"></i></span>
+                        </p>
+                        {% if raffle.winner == request.user %}
+                        <span class="badge bg-warning text-dark mt-2 p-2">
+                            <i class="fas fa-crown me-1"></i> ¡Tú ganaste!
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- User Tickets Section -->
+            <h4 class="mb-4"><i class="fas fa-ticket-alt me-2"></i>Tus Tickets</h4>
+            {% if user_tickets %}
+            <div class="user-tickets">
+                {% for ticket in user_tickets %}
+                <span class="user-ticket {% if raffle.status == 'FINISHED' and ticket.number == raffle.winning_number %}user-ticket-winning{% else %}user-ticket-normal{% endif %}">
+                    #{{ ticket.number }}
+                    {% if raffle.status == 'FINISHED' and ticket.number == raffle.winning_number %}
+                    <i class="fas fa-trophy ms-2"></i>
+                    {% endif %}
+                </span>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-info-circle me-3 fa-lg"></i>
+                    <span>No tienes tickets en esta rifa.</span>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Available Numbers Section -->
+            <h4 class="mb-4 mt-5"><i class="fas fa-grid me-2"></i>Números Disponibles</h4>
+            
+            {% if raffle.status == 'FINISHED' %}
+            <div class="alert alert-warning">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-info-circle me-3 fa-lg"></i>
+                    <span>Esta rifa ha terminado. No se pueden comprar más tickets.</span>
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="ticket-grid">
+                {% for number in available_numbers %}
+                    {% if number in sold_numbers %}
+                        {% for ticket in raffle.tickets.all %}
+                            {% if ticket.number == number %}
+                            <div class="ticket-number {% if ticket.owner == request.user %}ticket-mine{% else %}ticket-sold{% endif %}">
+                                {{ number }}
+                                {% if raffle.status == 'FINISHED' and number == raffle.winning_number %}
+                                <i class="fas fa-trophy ms-1"></i>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        {% if raffle.status == 'WAITING' or raffle.status == 'IN_PROGRESS' %}
+                        <form method="post" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="number" value="{{ number }}">
+                            <button type="submit" class="ticket-number ticket-available w-100 border-0 bg-transparent">
+                                {{ number }}
+                            </button>
+                        </form>
+                        {% else %}
+                        <div class="ticket-number ticket-available">
+                            {{ number }}
+                        </div>
+                        {% endif %}
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="card-footer">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <a href="{% url 'raffle_lobby' %}" class="btn btn-secondary btn-action">
+                    <i class="fas fa-arrow-left me-2"></i>Volver al Lobby
+                </a>
+                
+                {% if user == raffle.organizer and raffle.can_be_drawn %}
+                <form method="post" action="{% url 'draw_raffle' raffle.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-warning btn-action">
+                        <i class="fas fa-random me-2"></i>Realizar Sorteo
+                    </button>
+                </form>
+                {% endif %}
+                
+                {% if raffle.status == 'FINISHED' %}
+                <div class="text-muted">
+                    <i class="fas fa-check-circle me-1"></i> Sorteo completado
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Confirmación antes de realizar el sorteo
+    const drawForm = document.querySelector('form[action*="draw_raffle"]');
+    if (drawForm) {
+        drawForm.addEventListener('submit', function(e) {
+            if (!confirm('¿Estás seguro de que quieres realizar el sorteo ahora? Esta acción no se puede deshacer.')) {
+                e.preventDefault();
+            }
+        });
+    }
+    
+    // Confirmación antes de comprar un ticket
+    const ticketForms = document.querySelectorAll('form[action=""]');
+    ticketForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            if (!confirm('¿Confirmas la compra de este ticket?')) {
+                e.preventDefault();
+            }
+        });
+    });
+    
+    // Efecto hover mejorado para tickets
+    const tickets = document.querySelectorAll('.ticket-number');
+    tickets.forEach(ticket => {
+        ticket.addEventListener('mouseenter', function() {
+            if (this.classList.contains('ticket-available')) {
+                this.style.transform = 'translateY(-5px) scale(1.1)';
+                this.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
+            }
+        });
+        
+        ticket.addEventListener('mouseleave', function() {
+            if (this.classList.contains('ticket-available')) {
+                this.style.transform = '';
+                this.style.boxShadow = '';
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

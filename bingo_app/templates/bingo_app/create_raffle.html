@@ -1,0 +1,247 @@
+{% extends "bingo_app/base.html" %}
+
+{% block extra_css %}
+<style>
+    /* Estilos generales para texto oscuro */
+    .form-label,
+    .form-control,
+    .form-select,
+    .form-text,
+    .text-muted,
+    .card-body,
+    .card-header h3,
+    .invalid-feedback {
+        color: #212529 !important;
+    }
+
+    /* Estilo específico para los placeholders */
+    .form-control::placeholder {
+        color: #6c757d !important;
+        opacity: 1;
+    }
+
+    /* Estilo para los íconos dentro de los inputs */
+    .input-group-text {
+        color: #495057 !important;
+        background-color: #f8f9fa !important;
+    }
+
+    /* Estilos mejorados para la creación de rifas */
+    .card {
+        border-radius: 15px;
+        border: none;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        overflow: hidden;
+        background-color: white !important;
+    }
+    
+    .card-header {
+        background: linear-gradient(135deg, #28a745, #218838) !important;
+        border-bottom: none;
+        padding: 20px;
+    }
+    
+    .card-body {
+        color: #212529 !important;
+    }
+    
+    .card-footer {
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef) !important;
+        border-top: 1px solid rgba(0,0,0,0.05) !important;
+        padding: 20px;
+    }
+    
+    .form-control, .form-select {
+        border-radius: 10px;
+        padding: 12px 15px;
+        border: 1px solid rgba(0,0,0,0.1);
+        transition: all 0.3s;
+        color: #212529 !important;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #28a745;
+        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.2);
+    }
+    
+    .input-group-text {
+        background-color: #f8f9fa;
+        border-radius: 10px 0 0 10px !important;
+        border-right: none;
+    }
+    
+    .input-group .form-control {
+        border-left: none;
+        border-radius: 0 10px 10px 0 !important;
+    }
+    
+    .btn {
+        border-radius: 10px;
+        font-weight: 500;
+        padding: 10px 20px;
+        transition: all 0.3s;
+    }
+    
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .btn-success {
+        background: linear-gradient(135deg, #28a745, #218838);
+        border: none;
+    }
+    
+    .btn-secondary {
+        background: linear-gradient(135deg, #6c757d, #5a6268);
+        border: none;
+    }
+    
+    .invalid-feedback {
+        color: #dc3545 !important;
+        font-size: 0.875em;
+        margin-top: 5px;
+    }
+    
+    .is-invalid {
+        border-color: #dc3545 !important;
+    }
+    
+    .is-invalid:focus {
+        box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.25);
+    }
+    
+    .form-text {
+        color: #6c757d !important;
+        font-size: 0.875em;
+        margin-top: 5px;
+    }
+    
+    #total-tickets {
+        font-weight: bold;
+        color: #28a745 !important;
+    }
+    
+    /* Animaciones */
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.02); }
+        100% { transform: scale(1); }
+    }
+    
+    .pulse-animation {
+        animation: pulse 1.5s infinite;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .card-header, .card-footer {
+            padding: 15px;
+        }
+        
+        .form-control, .form-select {
+            padding: 10px 12px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h3 class="mb-0 text-white"><i class="fas fa-ticket-alt me-2"></i>Crear Nueva Rifa</h3>
+                </div>
+                
+                <form method="post" class="needs-validation" novalidate>
+                    {% csrf_token %}
+                    
+                    <div class="card-body text-dark">
+                        <div class="row mb-3">
+                            <div class="col-md-12 mb-3">
+                                <label for="id_title" class="form-label">Título de la rifa</label>
+                                {{ form.title }}
+                                <div class="invalid-feedback">Por favor ingresa un título</div>
+                            </div>
+                            
+                            <div class="col-md-12 mb-3">
+                                <label for="id_description" class="form-label">Descripción (opcional)</label>
+                                {{ form.description }}
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-4 mb-3">
+                                <label for="id_ticket_price" class="form-label">Precio por ticket</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-coins"></i></span>
+                                    {{ form.ticket_price }}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="id_prize" class="form-label">Premio</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-trophy"></i></span>
+                                    {{ form.prize }}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="id_draw_date" class="form-label">Fecha del sorteo</label>
+                                {{ form.draw_date }}
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6 mb-3">
+                                <label for="id_start_number" class="form-label">Número inicial</label>
+                                {{ form.start_number }}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="id_end_number" class="form-label">Número final</label>
+                                {{ form.end_number }}
+                                <div class="form-text">Total de tickets: <span id="total-tickets">1</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer">
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'organizer_dashboard' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-success pulse-animation">
+                                <i class="fas fa-save me-2"></i>Crear Rifa
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const startNumber = document.getElementById('id_start_number');
+    const endNumber = document.getElementById('id_end_number');
+    const totalTickets = document.getElementById('total-tickets');
+    
+    function calculateTotal() {
+        const start = parseInt(startNumber.value) || 1;
+        const end = parseInt(endNumber.value) || 1;
+        totalTickets.textContent = (end - start + 1);
+    }
+    
+    startNumber.addEventListener('change', calculateTotal);
+    endNumber.addEventListener('change', calculateTotal);
+    
+    // Initialize
+    calculateTotal();
+});
+</script>
+{% endblock %}

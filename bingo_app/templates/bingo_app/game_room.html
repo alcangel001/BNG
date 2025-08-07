@@ -1,0 +1,1250 @@
+{% extends "bingo_app/base.html" %}
+
+{% block title %}{{ game.name }} - Bingo Online{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Estilos base del juego mejorados */
+    .bingo-card {
+        border: 3px solid var(--accent-color);
+        border-radius: 15px;
+        background: linear-gradient(145deg, #ffffff, #f0f0f0);
+        padding: 12px;
+        margin-bottom: 25px;
+        box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+        position: relative;
+        transition: all 0.3s ease;
+    }
+
+    .bingo-card tr {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+    }
+
+    .bingo-card table {
+        width: 100%;
+        table-layout: fixed;
+    }
+    
+    .bingo-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.25);
+    }
+    
+    .bingo-header {
+        background: linear-gradient(to right, var(--accent-color), #c0392b);
+        color: white;
+        padding: 8px;
+        text-align: center;
+        font-weight: bold;
+        border-radius: 10px 10px 0 0;
+        margin: -12px -12px 12px -12px;
+        font-size: 1.1rem;
+        letter-spacing: 1px;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+    }
+    
+    .bingo-cell {
+        flex: 1;
+        min-width: 0;
+        width: auto;
+        height: 50px;
+        border: 2px solid #e0e0e0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin: 3px;
+        font-weight: bold;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+        background: white;
+        font-size: 1.1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .bingo-cell.called {
+        background: linear-gradient(145deg, #ffc107, #ffab00);
+        transform: scale(1.05);
+        border-color: #ffab00;
+        color: #2C3E50;
+        box-shadow: 0 3px 6px rgba(255,171,0,0.3);
+        font-weight: bolder;
+    }
+    
+    .current-number-container {
+        background: linear-gradient(135deg, #2C3E50, #1A252F);
+        color: white;
+        padding: 25px;
+        border-radius: 15px;
+        text-align: center;
+        margin-bottom: 25px;
+        box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .current-number {
+        font-size: 5rem;
+        font-weight: bold;
+        margin: 15px 0;
+        text-shadow: 0 0 10px rgba(255,255,255,0.3);
+        font-family: 'Arial Black', sans-serif;
+        background: linear-gradient(to right, #ffffff, #f0f0f0);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    
+    /* Panel de créditos mejorado */
+    .credit-panel {
+        background: linear-gradient(135deg, #27ae60, #2ecc71);
+        color: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 25px;
+        box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+        border: none;
+    }
+    
+    .credit-balance {
+        font-size: 2rem;
+        font-weight: bold;
+        text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+    }
+    
+    .buy-card-btn {
+        transition: all 0.3s;
+        border-radius: 8px;
+        font-weight: bold;
+        box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+    }
+    
+    .buy-card-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+    }
+    
+    /* Chat y números llamados mejorados */
+    #chat-messages {
+        height: 300px;
+        overflow-y: auto;
+        background: #161f2c;
+        border: 1px solid #161f2c;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 15px;
+        scrollbar-width: thin;
+        scrollbar-color: var(--accent-color) #161f2c;
+    }
+    
+    #chat-messages::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    #chat-messages::-webkit-scrollbar-track {
+        background: #161f2c;
+        border-radius: 3px;
+    }
+    
+    #chat-messages::-webkit-scrollbar-thumb {
+        background-color: var(--accent-color);
+        border-radius: 3px;
+    }
+    
+    .chat-message {
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 8px;
+        background: #161f2c;
+        border-left: 4px solid var(--accent-color);
+    }
+    
+    .message-user {
+        color: white;
+    }
+    
+    .message-time {
+        color: #6c757d;
+    }
+    
+    .called-numbers-container {
+        background: #161f2c;
+        border: 1px solid #dee2e6;
+        border-radius: 15px;
+        padding: 20px;
+        margin-top: 25px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    }
+    
+    .called-number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(to bottom, #3498db, #2980b9);
+        color: white;
+        text-align: center;
+        margin: 5px;
+        border-radius: 50%;
+        font-weight: bold;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: all 0.3s;
+    }
+    
+    .called-number.newest {
+        background: linear-gradient(to bottom, #e74c3c, #c0392b);
+        transform: scale(1.3);
+        box-shadow: 0 0 15px rgba(231,76,60,0.5);
+    }
+    
+    /* Botones principales mejorados */
+    .game-control-btn {
+        font-size: 1.2rem;
+        padding: 12px 25px;
+        transition: all 0.3s;
+        border-radius: 10px;
+        font-weight: bold;
+        letter-spacing: 0.5px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .game-control-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    }
+    
+    /* Animaciones mejoradas */
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+    }
+    
+    @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-15px); }
+    }
+    
+    .pulse-animation {
+        animation: pulse 1s infinite;
+    }
+    
+    .prize-increase-animation {
+        animation: pulse 0.5s 2;
+    }
+    
+    /* Estado del juego mejorado */
+    .game-status-badge {
+        font-size: 1rem;
+        margin-top: 10px;
+        padding: 8px 15px;
+        border-radius: 20px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    
+    /* Loader mejorado */
+    .btn-loader {
+        display: inline-block;
+        width: 1.2rem;
+        height: 1.2rem;
+        border: 3px solid rgba(255,255,255,0.3);
+        border-radius: 50%;
+        border-top-color: #fff;
+        animation: spin 0.8s linear infinite;
+        margin-right: 10px;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    /* Premio progresivo mejorado */
+    .prize-card {
+        transition: all 0.3s;
+        border: none;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        position: relative;
+        overflow: hidden;
+        border-radius: 15px;
+    }
+    
+    .prize-card::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(
+            to bottom right,
+            rgba(255,255,255,0.1) 0%,
+            rgba(255,255,255,0) 50%,
+            rgba(255,255,255,0.1) 100%
+        );
+        transform: rotate(30deg);
+        animation: shine 3s infinite;
+    }
+    
+    @keyframes shine {
+        0% { transform: translateX(-100%) rotate(30deg); }
+        100% { transform: translateX(100%) rotate(30deg); }
+    }
+    
+    .prize-header {
+        background: linear-gradient(135deg, #8e44ad, #9b59b6);
+        border-bottom: none;
+        color: white;
+        font-size: 1.2rem;
+        padding: 15px;
+        text-align: center;
+    }
+    
+    .prize-body {
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        padding: 20px;
+    }
+    
+    .prize-increase-badge {
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        background: linear-gradient(to bottom, #2ecc71, #27ae60);
+        color: white;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        font-weight: bold;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        z-index: 1;
+    }
+    
+    /* Progreso mejorado */
+    .progress-info {
+        margin-bottom: 20px;
+    }
+    
+    .progress {
+        height: 12px;
+        border-radius: 10px;
+        background-color: #e9ecef;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .progress-bar {
+        background: linear-gradient(to right, #2ecc71, #27ae60);
+        border-radius: 10px;
+        box-shadow: 0 2px 5px rgba(46,204,113,0.3);
+        transition: width 0.6s ease;
+    }
+    
+    /* Jugadores mejorado */
+    .player-list {
+        max-height: 300px;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: var(--accent-color) #161f2c;
+    }
+    
+    .player-list::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .player-list::-webkit-scrollbar-track {
+        background: #161f2c;
+        border-radius: 3px;
+    }
+    
+    .player-list::-webkit-scrollbar-thumb {
+        background-color: var(--accent-color);
+        border-radius: 3px;
+    }
+    
+    .player-item {
+        padding: 12px 15px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        background: #161f2c;
+        transition: all 0.2s;
+        border-left: 4px solid transparent;
+    }
+    
+    .player-item:hover {
+        transform: translateX(5px);
+        box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+    }
+    
+    .player-item.organizer {
+        border-left-color: var(--primary-color);
+        background: rgba(44, 62, 80, 0.05);
+    }
+    
+    .player-item.winner {
+        border-left-color: #27ae60;
+        background: rgba(39, 174, 96, 0.05);
+    }
+    
+    /* Efectos especiales para bingo */
+    .bingo-win-effect {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 1000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: rgba(0,0,0,0.5);
+        opacity: 0;
+        transition: opacity 0.5s;
+    }
+    
+    .bingo-text {
+        font-size: 8rem;
+        font-weight: bold;
+        color: #ffc107;
+        text-shadow: 0 0 20px #ff5722;
+        transform: scale(0);
+        animation: bingoReveal 1s forwards;
+    }
+    
+    @keyframes bingoReveal {
+        0% { transform: scale(0); opacity: 0; }
+        50% { transform: scale(1.2); opacity: 1; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .current-number {
+            font-size: 3.5rem;
+        }
+        
+        .bingo-cell {
+            width: 40px;
+            height: 40px;
+            font-size: 1rem;
+        }
+        
+        .prize-card .display-4 {
+            font-size: 2rem !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Columna principal -->
+    <div class="col-md-8">
+        <!-- Número actual -->
+        <div class="current-number-container">
+            <h3>Número actual</h3>
+            <div class="current-number" id="current-number">
+                {% if game.current_number %}{{ game.current_number }}{% else %}---{% endif %}
+            </div>
+            <div id="number-status"></div>
+            
+            <!-- Mostrar modalidad actual -->
+            <div class="mt-3">
+                <span class="badge bg-info fs-6">
+                    <i class="fas fa-chess-board me-1"></i>
+                    Modalidad: {{ game.get_winning_pattern_display }}
+                </span>
+                <span class="badge bg-secondary fs-6 ms-2">
+                    <i class="fas fa-users me-1"></i>
+                    Jugadores: {{ game.player_set.count }}
+                </span>
+            </div>
+            
+            <!-- Tarjeta de premio mejorada -->
+            <div class="card prize-card mb-4 mt-3 position-relative">
+                <div class="card-header text-white prize-header">
+                    <h4 class="mb-0 text-center">
+                        <i class="fas fa-trophy me-2"></i> PREMIO ACTUAL
+                    </h4>
+                </div>
+                <div class="card-body prize-body">
+                    <!-- Premio principal con destaque -->
+                    <div class="text-center mb-4">
+                        <div class="display-4 fw-bold text-primary" style="font-size: 2.5rem;" id="current-prize-display">
+                            ${{ game.current_prize | floatformat:2 }}
+                        </div>
+                        <div class="text-muted small">Premio acumulado</div>
+                    </div>
+
+                    <div class="row g-3">
+                        <!-- Columna izquierda -->
+                        <div class="col-md-6">
+                            <div class="p-3 bg-white rounded shadow-sm mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="text-muted">Cartones totales:</span>
+                                    <strong id="total-cards-display">{{ game.total_cards_sold }}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-muted">Precio base:</span>
+                                    <strong>${{ game.base_prize|floatformat:2 }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Columna derecha -->
+                        <div class="col-md-6">
+                            <div class="p-3 bg-white rounded shadow-sm">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="text-muted">Próxima meta:</span>
+                                    <strong id="next-prize-target">{{ game.next_prize_target|default:"-" }}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-muted">Faltan:</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Barra de progreso mejorada -->
+                    {% if game.next_prize_target %}
+                    <div class="progress-info mt-4">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="small text-muted">Progreso hacia el aumento</span>
+                            <span class="small fw-bold" id="progress-text">{{ game.total_cards_sold }}/{{ game.next_prize_target }}</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar" 
+                                 style="width: {{ game.progress_percentage }}%;"
+                                 id="progress-bar" role="progressbar">
+                            </div>
+                        </div>
+                        <p class="text-center mt-2 mb-0">
+                            <small class="text-muted">
+                                Al alcanzar <strong>{{ game.next_prize_target }}</strong> cartones totales, 
+                                el premio aumentará según la configuración del juego
+                            </small>
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Estado del juego -->
+            <div class="mt-2 text-center">
+                {% if game.is_finished %}
+                <span class="badge bg-danger game-status-badge">
+                    <i class="fas fa-flag-checkered me-1"></i>
+                    Juego terminado - Ganador: {% if game.winner %}{{ game.winner.username }}{% else %}---{% endif %}
+                </span>
+                {% elif game.is_started %}
+                    {% if game.is_auto_calling %}
+                    <span class="badge bg-success game-status-badge">
+                        <i class="fas fa-robot me-1"></i>
+                        Llamada automática: cada {{ game.auto_call_interval }} segundos
+                    </span>
+                    {% else %}
+                    <span class="badge bg-primary game-status-badge">
+                        <i class="fas fa-play me-1"></i>
+                        Juego en progreso
+                    </span>
+                    {% endif %}
+                {% else %}
+                <span class="badge bg-secondary game-status-badge">
+                    <i class="fas fa-hourglass-start me-1"></i>
+                    Juego no iniciado
+                </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Panel de créditos y compra de cartones -->
+        <div class="credit-panel mb-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-1"><i class="fas fa-coins me-1"></i> Tus Créditos</h5>
+                    <div class="credit-balance">{{ request.user.credit_balance|floatformat:2 }}</div>
+                </div>
+                <div class="text-end">
+                    <div class="mb-1"><small>Cartón: {{ game.card_price|floatformat:2 }} créditos</small></div>
+                    <button id="buy-card-btn" class="btn btn-light buy-card-btn"
+                            {% if player.cards|length >= game.max_cards_per_player or game.is_started or game.is_finished %}disabled{% endif %}>
+                        <i class="fas fa-shopping-cart me-1"></i>
+                        Comprar Cartón ({{ game.card_price|floatformat:2 }})
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cartones del jugador -->
+        <h3 class="mb-3">Tus Cartones ({{ player.cards|length }}/{{ game.max_cards_per_player }})</h3>
+        <div class="row" id="cards-container">
+            {% for card in player.cards %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="bingo-card">
+                    <div class="bingo-header">Cartón {{ forloop.counter }}</div>
+                    <table class="table table-bordered text-center mb-0">
+                        {% for row in card %}
+                        <tr>
+                            {% for num in row %}
+                            <td class="bingo-cell {% if num in game.called_numbers %}called{% endif %}" 
+                                id="cell-{{ forloop.parentloop.parentloop.counter }}-{{ forloop.parentloop.counter }}-{{ forloop.counter }}">
+                                {{ num }}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Botones del organizador -->
+        {% if request.user == game.organizer and not game.is_finished %}
+        <div class="d-grid gap-2 mt-3" id="game-controls">
+            {% if not game.is_started %}
+            <button id="start-game-btn" class="btn btn-danger btn-lg game-control-btn">
+                <i class="fas fa-play me-2"></i>Iniciar Juego
+            </button>
+            {% else %}
+                {% if game.is_auto_calling %}
+                <button id="stop-auto-call-btn" class="btn btn-warning btn-lg game-control-btn">
+                    <i class="fas fa-stop me-2"></i>Detener Llamada Automática
+                </button>
+                {% else %}
+                <button id="start-auto-call-btn" class="btn btn-success btn-lg game-control-btn">
+                    <i class="fas fa-robot me-2"></i>Iniciar Llamada Automática
+                </button>
+                {% endif %}
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Columna lateral -->
+    <div class="col-md-4">
+        <!-- Lista de jugadores -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-info text-white">
+                <h3 class="mb-0"><i class="fas fa-users me-2"></i>Jugadores ({{ game.player_set.count }})</h3>
+            </div>
+            <div class="card-body">
+                <ul class="list-group player-list">
+                    {% for player in game.player_set.all %}
+                    <li class="list-group-item player-item {% if player.user == game.organizer %}organizer{% endif %} {% if player.user == game.winner %}winner{% endif %}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                {{ player.user.username }}
+                                {% if player.user == request.user %}<span class="badge bg-primary ms-2">Tú</span>{% endif %}
+                                {% if player.user == game.winner %}<span class="badge bg-success ms-2">Ganador</span>{% endif %}
+                            </div>
+                            <div>
+                                {% if player.user == game.organizer %}
+                                    <span class="badge bg-dark">Organizador</span>
+                                {% endif %}
+                                <span class="badge bg-secondary ms-1">{{ player.cards|length }} cartones</span>
+                            </div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <!-- Chat de la sala -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-secondary text-white">
+                <h3 class="mb-0"><i class="fas fa-comments me-2"></i>Chat</h3>
+            </div>
+            <div class="card-body">
+                <div id="chat-messages">
+                    {% for message in chat_messages %}
+                    <div class="chat-message mb-2">
+                        <div class="d-flex justify-content-between">
+                            <span class="message-user fw-bold">{{ message.user.username }}</span>
+                            <span class="message-time text-muted small">{{ message.timestamp|time:"H:i" }}</span>
+                        </div>
+                        <div class="message-content">{{ message.message }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="input-group mt-2">
+                    <input type="text" id="chat-message-input" class="form-control" placeholder="Escribe un mensaje..." {% if game.is_finished %}disabled{% endif %}>
+                    <button id="chat-message-submit" class="btn btn-primary" {% if game.is_finished %}disabled{% endif %}>
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Números llamados -->
+        <div class="called-numbers-container">
+            <h5><i class="fas fa-list-ol me-1"></i>Números llamados ({{ game.called_numbers|length }}/90)</h5>
+            <div id="called-numbers" class="d-flex flex-wrap">
+                {% for num in game.called_numbers %}
+                <span class="called-number {% if num == game.current_number %}newest{% endif %}">{{ num }}</span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Efecto de bingo (oculto inicialmente) -->
+<div class="bingo-win-effect" id="bingo-effect">
+    <div class="bingo-text">¡BINGO!</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    // Configuración inicial
+    const gameId = {{ game.id }};
+    const currentUser = "{{ request.user.username }}";
+    const isOrganizer = {% if request.user == game.organizer %}true{% else %}false{% endif %};
+    const isGameStarted = {% if game.is_started %}true{% else %}false{% endif %};
+    const isGameFinished = {% if game.is_finished %}true{% else %}false{% endif %};
+    const isAutoCalling = {% if game.is_auto_calling %}true{% else %}false{% endif %};
+    const autoCallInterval = {{ game.auto_call_interval }};
+    const cardPrice = parseFloat("{{ game.card_price }}");
+    const maxCards = parseInt("{{ game.max_cards_per_player }}");
+    const playerCardsCount = parseInt("{{ player.cards|length }}");
+    const winningPattern = "{{ game.get_winning_pattern_display }}";
+    let currentPrize = parseFloat("{{ game.current_prize|default:0 }}");
+    let maxCardsSold = parseInt("{{ game.max_cards_sold }}");
+    
+    // Elementos del DOM
+    const currentNumberEl = document.getElementById('current-number');
+    const buyCardBtn = document.getElementById('buy-card-btn');
+    
+    // WebSocket
+    const socket = new WebSocket(`ws://${window.location.host}/game/${gameId}/`);
+    
+    // ==================== Funciones para actualizar premio y progreso ====================
+    function updatePrizeDisplay(newPrize, increaseAmount = 0) {
+        const prizeElement = document.getElementById('current-prize-display');
+        prizeElement.textContent = `$${parseFloat(newPrize).toFixed(2)}`;
+        
+        // Animación cuando hay aumento
+        if (increaseAmount > 0) {
+            const increaseBadge = document.createElement('span');
+            increaseBadge.className = 'prize-increase-badge';
+            increaseBadge.textContent = `+${parseFloat(increaseAmount).toFixed(2)}`;
+            prizeElement.parentElement.appendChild(increaseBadge);
+            
+            setTimeout(() => {
+                increaseBadge.remove();
+            }, 3000);
+        }
+    }
+    
+    function updateProgress(currentCards, target, percentage) {
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const totalCardsDisplay = document.getElementById('total-cards-display');
+        const nextPrizeTarget = document.getElementById('next-prize-target');
+        const remainingCards = document.getElementById('remaining-cards');
+        
+        // Actualizar elementos
+        progressBar.style.width = `${percentage}%`;
+        progressText.textContent = `${currentCards}/${target}`;
+        totalCardsDisplay.textContent = currentCards;
+        nextPrizeTarget.textContent = target;
+        remainingCards.textContent = target - currentCards;
+        
+        // Actualizar variable local
+        maxCardsSold = currentCards;
+    }
+
+    function showToast(icon, title, text) {
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer)
+                toast.addEventListener('mouseleave', Swal.resumeTimer)
+            }
+        });
+        
+        Toast.fire({ icon, title, text });
+    }
+    
+    // ==================== Funciones auxiliares ====================
+    function updateGameStatus(isStarted, isFinished, isAutoCalling, winner = null) {
+        const statusBadge = document.querySelector('.game-status-badge');
+        
+        if (isFinished) {
+            statusBadge.className = 'badge bg-danger game-status-badge';
+            statusBadge.innerHTML = `<i class="fas fa-flag-checkered me-1"></i> Juego terminado - Ganador: ${winner || '---'}`;
+        } else if (isStarted) {
+            if (isAutoCalling) {
+                statusBadge.className = 'badge bg-success game-status-badge';
+                statusBadge.innerHTML = `<i class="fas fa-robot me-1"></i> Llamada automática: cada ${autoCallInterval} segundos`;
+            } else {
+                statusBadge.className = 'badge bg-primary game-status-badge';
+                statusBadge.innerHTML = '<i class="fas fa-play me-1"></i> Juego en progreso';
+            }
+        } else {
+            statusBadge.className = 'badge bg-secondary game-status-badge';
+            statusBadge.innerHTML = '<i class="fas fa-hourglass-start me-1"></i> Juego no iniciado';
+        }
+    }
+    
+    function updateGameControls(isStarted, isAutoCalling) {
+        if (!isOrganizer) return;
+        
+        const controlsDiv = document.getElementById('game-controls');
+        
+        if (!isStarted) {
+            controlsDiv.innerHTML = `
+                <button id="start-game-btn" class="btn btn-danger btn-lg game-control-btn">
+                    <i class="fas fa-play me-2"></i>Iniciar Juego
+                </button>
+            `;
+            document.getElementById('start-game-btn').addEventListener('click', startGame);
+        } else {
+            if (isAutoCalling) {
+                controlsDiv.innerHTML = `
+                    <button id="stop-auto-call-btn" class="btn btn-warning btn-lg game-control-btn">
+                        <i class="fas fa-stop me-2"></i>Detener Llamada Automática
+                    </button>
+                `;
+                document.getElementById('stop-auto-call-btn').addEventListener('click', stopAutoCall);
+            } else {
+                controlsDiv.innerHTML = `
+                    <button id="start-auto-call-btn" class="btn btn-success btn-lg game-control-btn">
+                        <i class="fas fa-robot me-2"></i>Iniciar Llamada Automática
+                    </button>
+                `;
+                document.getElementById('start-auto-call-btn').addEventListener('click', startAutoCall);
+            }
+        }
+    }
+    
+    function updateCalledNumbers(calledNumbers, currentNumber = null) {
+        const calledNumbersContainer = document.getElementById('called-numbers');
+        calledNumbersContainer.innerHTML = '';
+        
+        calledNumbers.forEach(num => {
+            const numElement = document.createElement('span');
+            numElement.className = `called-number ${num === currentNumber ? 'newest' : ''}`;
+            numElement.textContent = num;
+            calledNumbersContainer.appendChild(numElement);
+        });
+        
+        // Actualizar celdas marcadas en los cartones
+        document.querySelectorAll('.bingo-cell').forEach(cell => {
+            const num = parseInt(cell.textContent);
+            if (calledNumbers.includes(num)) {
+                cell.classList.add('called');
+            } else {
+                cell.classList.remove('called');
+            }
+        });
+    }
+    
+    function updateCreditBalance(newBalance) {
+        const balanceElement = document.querySelector('.credit-balance');
+        balanceElement.textContent = parseFloat(newBalance).toFixed(2);
+    }
+    
+    function updateCardCounter(newCount) {
+        document.querySelector('h3.mb-3').textContent = `Tus Cartones (${newCount}/${maxCards})`;
+    }
+    
+    function addNewCardToUI(cardData, cardNumber) {
+        const cardsContainer = document.getElementById('cards-container');
+        
+        const cardDiv = document.createElement('div');
+        cardDiv.className = 'col-md-6 col-lg-4 mb-4';
+        
+        // Obtener los números llamados actuales del DOM
+        const calledNumbers = Array.from(document.querySelectorAll('.called-number')).map(el => parseInt(el.textContent));
+        
+        cardDiv.innerHTML = `
+            <div class="bingo-card">
+                <div class="bingo-header">Cartón ${cardNumber}</div>
+                <table class="table table-bordered text-center mb-0">
+                    ${cardData.map((row, rowIndex) => `
+                        <tr>
+                            ${row.map((num, cellIndex) => `
+                                <td class="bingo-cell ${calledNumbers.includes(num) ? 'called' : ''}" 
+                                    id="cell-${cardNumber}-${rowIndex}-${cellIndex}">
+                                    ${num}
+                                </td>
+                            `).join('')}
+                        </tr>
+                    `).join('')}
+                </table>
+            </div>
+        `;
+        
+        cardsContainer.appendChild(cardDiv);
+    }
+
+    // ==================== Manejador de WebSocket ====================
+    socket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        
+        switch(data.type) {
+            case 'game_status':
+                handleGameStatus(data);
+                break;
+                
+            case 'chat_message':
+                handleChatMessage(data);
+                break;
+
+            case 'refresh_page':
+                if (data.force_refresh && !isOrganizer) {
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                }
+                break;
+                
+            case 'number_called':
+                handleNewNumber(data);
+                break;
+                
+            case 'game_started':
+                handleGameStarted(data);
+                break;
+                
+            case 'game_ended':
+                handleGameEnded(data);
+                break;
+                
+            case 'auto_call_toggled':
+                handleAutoCallToggled(data);
+                break;
+                
+            case 'credit_update':
+                updateCreditBalance(data.new_balance);
+                break;
+                
+            case 'prize_updated':
+                handlePrizeUpdate(data);
+                break;
+                
+            case 'card_purchased':
+                handleCardPurchased(data);
+                break;
+        }
+    };
+    
+    // ==================== Manejadores de eventos WebSocket ====================
+    function handleGameStatus(data) {
+        updateGameStatus(data.is_started, data.is_finished, data.is_auto_calling);
+        updateGameControls(data.is_started, data.is_auto_calling);
+        
+        if (data.current_number) {
+            currentNumberEl.textContent = data.current_number;
+        }
+        
+        if (data.called_numbers) {
+            updateCalledNumbers(data.called_numbers, data.current_number);
+        }
+        
+        if (data.current_prize) {
+            updatePrizeDisplay(data.current_prize);
+        }
+        
+        // Actualizar max_cards_sold si viene en los datos
+        if (data.max_cards_sold !== undefined) {
+            maxCardsSold = data.max_cards_sold;
+            updateProgress(maxCardsSold, data.next_prize_target, data.progress_percentage);
+        }
+    }
+    
+    function handleChatMessage(data) {
+        const chatMessages = document.getElementById('chat-messages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'chat-message mb-2';
+        
+        messageDiv.innerHTML = `
+            <div class="d-flex justify-content-between">
+                <span class="message-user fw-bold">${data.user}</span>
+                <span class="message-time text-muted small">${new Date(data.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+            </div>
+            <div class="message-content">${data.message}</div>
+        `;
+        
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    
+    function handleNewNumber(data) {
+        // Actualizar número actual
+        currentNumberEl.textContent = data.number;
+        currentNumberEl.style.animation = 'bounce 0.5s';
+        setTimeout(() => currentNumberEl.style.animation = '', 500);
+        
+        // Mostrar notificación
+        const numberStatus = document.getElementById('number-status');
+        numberStatus.innerHTML = `<div class="alert alert-success">Número ${data.number} llamado</div>`;
+        setTimeout(() => numberStatus.innerHTML = '', 3000);
+        
+        // Actualizar números llamados
+        updateCalledNumbers(data.called_numbers, data.number);
+    }
+    
+    function handleGameStarted(data) {
+        showToast('info', '¡El juego ha comenzado!', 'No se pueden comprar más cartones');
+        updateGameStatus(true, false, data.is_auto_calling);
+        updateGameControls(true, data.is_auto_calling);
+
+        // Actualizar premio y progreso
+        if (data.current_prize !== undefined) {
+            updatePrizeDisplay(data.current_prize);
+        }
+        
+        // Usar max_cards_sold en lugar de total_cards_sold para el progreso
+        if (data.max_cards_sold !== undefined && data.next_prize_target !== undefined) {
+            maxCardsSold = data.max_cards_sold;
+            updateProgress(maxCardsSold, data.next_prize_target, data.progress_percentage);
+        }
+        
+        // Deshabilitar botón de compra
+        buyCardBtn.disabled = true;
+    }
+    
+    function handleGameEnded(data) {
+        const isCurrentUser = data.winner === currentUser;
+        const message = isCurrentUser ? 
+            `¡Felicidades! Has ganado ${data.prize} créditos` :
+            `¡${data.winner} ha ganado ${data.prize} créditos!`;
+        
+        // Mostrar efecto de bingo
+        const bingoEffect = document.getElementById('bingo-effect');
+        bingoEffect.style.opacity = '1';
+        setTimeout(() => {
+            bingoEffect.style.opacity = '0';
+        }, 2000);
+        
+        Swal.fire({
+            title: '¡BINGO!',
+            html: message,
+            icon: 'success',
+            confirmButtonText: 'OK'
+        });
+        
+        updateGameStatus(true, true, false, data.winner);
+        
+        // Deshabilitar controles
+        document.getElementById('chat-message-input').disabled = true;
+        document.getElementById('chat-message-submit').disabled = true;
+        
+        // Si es el ganador, actualizar balance
+        if (isCurrentUser) {
+            const currentBalance = parseFloat(document.querySelector('.credit-balance').textContent);
+            updateCreditBalance(currentBalance + data.prize);
+        }
+    }
+    
+    function handleAutoCallToggled(data) {
+        if (data.is_auto_calling) {
+            showToast('success', 'Llamada automática iniciada', `Los números se llamarán cada ${autoCallInterval} segundos`);
+        } else {
+            showToast('info', 'Llamada automática detenida', 'El organizador debe llamar números manualmente');
+        }
+        
+        updateGameStatus(true, false, data.is_auto_calling);
+        updateGameControls(true, data.is_auto_calling);
+    }
+    
+    function handlePrizeUpdate(data) {
+        updatePrizeDisplay(data.new_prize, data.increase_amount || 0);
+        if (data.max_cards && data.next_target) {
+            maxCardsSold = data.max_cards;
+            updateProgress(maxCardsSold, data.next_target, data.progress_percentage);
+        }
+    }
+    
+    function handleCardPurchased(data) {
+        if (data.user === currentUser) {
+            // Actualizar el balance de créditos
+            updateCreditBalance(data.new_balance);
+            
+            // Actualizar contador de cartones
+            const newCardCount = data.player_cards_count;
+            updateCardCounter(newCardCount);
+            
+            // Agregar nuevo cartón a la interfaz
+            addNewCardToUI(data.new_card, newCardCount);
+            
+            // Actualizar el estado del botón basado en las nuevas condiciones
+            const canBuyMore = newCardCount < maxCards && !isGameStarted && !isGameFinished;
+            buyCardBtn.disabled = !canBuyMore;
+            
+            showToast('success', '¡Cartón comprado!', `Se han descontado ${cardPrice} créditos`);
+        }
+        
+        // Actualizar premio si hubo aumento (para todos los jugadores)
+        if (data.prize_increased) {
+            updatePrizeDisplay(data.new_prize, data.increase_amount);
+            maxCardsSold = data.maxCards;
+            updateProgress(maxCardsSold, data.next_prize_target, data.progress_percentage);
+        }
+    }
+    
+    // ==================== Funciones de control del juego ====================
+    async function startGame() {
+        try {
+            const startBtn = document.getElementById('start-game-btn');
+            startBtn.disabled = true;
+            startBtn.innerHTML = '<span class="btn-loader"></span> Iniciando...';
+
+            // Enviar solicitud al servidor para iniciar el juego
+            const response = await fetch(`/start-game/${gameId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const result = await response.json();
+
+
+            window.location.reload();
+            
+          /*  if (result.success) {
+                // Recargar la página para sincronizar completamente
+                
+            } else {
+                showToast('error', 'Error', result.error || 'No se pudo iniciar el juego');
+                startBtn.disabled = false;
+                startBtn.innerHTML = '<i class="fas fa-play me-2"></i>Iniciar Juego';
+            }*/
+        } catch (error) {
+            console.error('Error al iniciar el juego:', error);
+            showToast('error', 'Error', error.message || 'No se pudo iniciar el juego');
+            document.getElementById('start-game-btn').disabled = false;
+            document.getElementById('start-game-btn').innerHTML = '<i class="fas fa-play me-2"></i>Iniciar Juego';
+        }
+    }
+
+    async function startAutoCall() {
+        try {
+            const startBtn = document.getElementById('start-auto-call-btn');
+            startBtn.disabled = true;
+            startBtn.innerHTML = '<span class="btn-loader"></span> Iniciando...';
+            
+            socket.send(JSON.stringify({
+                'type': 'toggle_auto_call'
+            }));
+        } catch (error) {
+            showToast('error', 'Error', 'No se pudo iniciar la llamada automática');
+        }
+    }
+    
+    async function stopAutoCall() {
+        try {
+            const stopBtn = document.getElementById('stop-auto-call-btn');
+            stopBtn.disabled = true;
+            stopBtn.innerHTML = '<span class="btn-loader"></span> Deteniendo...';
+            
+            socket.send(JSON.stringify({
+                'type': 'toggle_auto_call'
+            }));
+        } catch (error) {
+            showToast('error', 'Error', 'No se pudo detener la llamada automática');
+        }
+    }
+    
+    // ==================== Eventos del DOM ====================
+    // Comprar cartón
+    buyCardBtn.addEventListener('click', async () => {
+        buyCardBtn.disabled = true;
+        buyCardBtn.innerHTML = '<span class="btn-loader"></span> Procesando...';
+        
+        try {
+            const response = await fetch(`/game/${gameId}/buy-card/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({})
+            });
+            
+            const result = await response.json();
+            
+            if (!result.success) {
+                showToast('error', 'Error', result.error || 'No se pudo completar la compra');
+                // Solo reactivar el botón si hay un error y el usuario puede comprar más
+                if (playerCardsCount < maxCards && !isGameStarted && !isGameFinished) {
+                    buyCardBtn.disabled = false;
+                }
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showToast('error', 'Error', 'No se pudo completar la compra');
+            // Solo reactivar el botón si hay un error y el usuario puede comprar más
+            if (playerCardsCount < maxCards && !isGameStarted && !isGameFinished) {
+                buyCardBtn.disabled = false;
+            }
+        } finally {
+            buyCardBtn.innerHTML = '<i class="fas fa-shopping-cart me-1"></i> Comprar Cartón';
+        }
+    });
+    
+    // Chat
+    document.querySelector('#chat-message-submit').addEventListener('click', sendChatMessage);
+    document.querySelector('#chat-message-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendChatMessage();
+    });
+    
+    function sendChatMessage() {
+        const messageInput = document.querySelector('#chat-message-input');
+        const message = messageInput.value.trim();
+        
+        if (message) {
+            socket.send(JSON.stringify({
+                'type': 'chat_message',
+                'message': message
+            }));
+            messageInput.value = '';
+        }
+    }
+    
+    // Función para obtener cookies
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // Inicializar controles del juego
+    document.addEventListener('DOMContentLoaded', () => {
+        if (isOrganizer) {
+            updateGameControls(isGameStarted, isAutoCalling);
+        }
+        
+        // Animar número actual periódicamente
+        if (!isGameFinished) {
+            setInterval(() => {
+                currentNumberEl.style.animation = 'pulse 1s';
+                setTimeout(() => currentNumberEl.style.animation = '', 1000);
+            }, 15000);
+        }
+    });
+</script>
+{% endblock %}

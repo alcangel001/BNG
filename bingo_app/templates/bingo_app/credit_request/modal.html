@@ -1,0 +1,89 @@
+<div class="modal fade" id="creditModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-coins me-2"></i>Solicitar Créditos
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'request_credits' %}" enctype="multipart/form-data" id="creditModalForm">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="modalAmount" class="form-label">Cantidad</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" id="modalAmount" name="amount" 
+                                   class="form-control" min="1" step="0.01" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="modalProof" class="form-label">Comprobante</label>
+                        <input type="file" id="modalProof" name="proof" 
+                               class="form-control" accept="image/*,.pdf" required>
+                        <div class="form-text">Sube una imagen o PDF de tu transferencia</div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Tu saldo se actualizará después de la verificación
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane me-2"></i>Enviar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('creditModalForm');
+    
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Enviando...';
+        
+        try {
+            const formData = new FormData(form);
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success) {
+                    // Cierra el modal y muestra notificación
+                    bootstrap.Modal.getInstance(document.getElementById('creditModal')).hide();
+                    showToast('¡Solicitud enviada!', 'success');
+                }
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Enviar';
+        }
+    });
+    
+    function showToast(message, type) {
+        // Implementa tu sistema de notificaciones o usa Bootstrap Toast
+        alert(message); // Temporal - reemplaza con tu sistema de notificaciones
+    }
+});
+</script>

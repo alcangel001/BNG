@@ -1,0 +1,759 @@
+{% extends "bingo_app/base.html" %}
+
+{% block extra_css %}
+<style>
+    /* Estilos generales para texto oscuro */
+    .form-label,
+    .form-control,
+    .form-select,
+    .form-text,
+    .text-muted,
+    .card-body,
+    .card-header h3,
+    .credit-info h5,
+    .credit-info p,
+    .progressive-prize-container h5,
+    .progressive-prize-container p,
+    .pattern-card h6,
+    .pattern-card small,
+    .error-message {
+        color: #212529 !important; /* Color oscuro para mejor legibilidad */
+    }
+
+    /* Estilo específico para los placeholders */
+    .form-control::placeholder {
+        color: #6c757d !important;
+        opacity: 1;
+    }
+
+    /* Estilo para los íconos dentro de los inputs */
+    .input-group-text {
+        color: #495057 !important;
+        background-color: #e9ecef !important;
+    }
+
+    /* Estilos mejorados para la creación de partida */
+    .pattern-card {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        height: 100%;
+    }
+    
+    .pattern-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    }
+    
+    .pattern-card.selected {
+        border-color: var(--accent-color);
+        background-color: rgba(231, 76, 60, 0.05);
+        box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
+    }
+    
+    .pattern-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        color: var(--primary-color);
+    }
+    
+    .price-input {
+        max-width: 180px;
+    }
+    
+    .credit-info {
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 25px;
+        border: 1px solid rgba(0,0,0,0.05);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    
+    .progressive-prize-container {
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 25px;
+        border: 1px solid rgba(0,0,0,0.05);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    
+    .prize-tier {
+        background-color: white;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 15px;
+        border: 1px solid rgba(0,0,0,0.1);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+    }
+    
+    .prize-tier:hover {
+        transform: translateX(3px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .add-tier-btn {
+        margin-top: 15px;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.3s;
+    }
+    
+    .add-tier-btn:hover {
+        transform: translateY(-2px);
+    }
+    
+    .remove-tier-btn {
+        transition: all 0.3s;
+    }
+    
+    .error-message {
+        color: #dc3545 !important;
+        font-size: 0.875em;
+        margin-top: 5px;
+    }
+    
+    .card-header {
+        border-radius: 12px 12px 0 0 !important;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)) !important;
+    }
+    
+    .form-control, .form-select {
+        border-radius: 8px;
+        padding: 10px 15px;
+        border: 1px solid rgba(0,0,0,0.1);
+        transition: all 0.3s;
+        color: #212529 !important;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.2);
+    }
+    
+    .is-invalid {
+        border-color: #dc3545 !important;
+    }
+    
+    .is-invalid:focus {
+        box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.25);
+    }
+    
+    .input-group-text {
+        background-color: #f8f9fa;
+        border-radius: 8px 0 0 8px !important;
+    }
+    
+    .card {
+        border-radius: 15px !important;
+        border: none;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        background-color: white !important;
+    }
+    
+    .card-footer {
+        border-radius: 0 0 15px 15px !important;
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef) !important;
+        border-top: 1px solid rgba(0,0,0,0.05) !important;
+    }
+    
+    .btn {
+        border-radius: 8px;
+        font-weight: 500;
+        padding: 10px 20px;
+        transition: all 0.3s;
+    }
+    
+    .btn:hover {
+        transform: translateY(-2px);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, var(--accent-color), #c0392b);
+        border: none;
+    }
+    
+    .btn-secondary {
+        background: linear-gradient(135deg, #6c757d, #5a6268);
+        border: none;
+    }
+    
+    .btn-outline-primary {
+        border-color: var(--accent-color);
+        color: var(--accent-color);
+    }
+    
+    .btn-outline-primary:hover {
+        background: linear-gradient(135deg, var(--accent-color), #c0392b);
+    }
+    
+    .btn-outline-danger {
+        border-color: #dc3545;
+        color: #dc3545;
+    }
+    
+    .btn-outline-danger:hover {
+        background: linear-gradient(135deg, #dc3545, #c82333);
+        color: white;
+    }
+    
+    /* Custom Pattern Editor Styles */
+    .custom-pattern-container {
+        display: none;
+        margin-top: 20px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 10px;
+        border: 1px solid #dee2e6;
+    }
+    
+    .pattern-grid {
+        margin: 0 auto;
+        border-collapse: collapse;
+    }
+    
+    .pattern-grid td {
+        width: 40px;
+        height: 40px;
+        border: 1px solid #dee2e6;
+        text-align: center;
+        cursor: pointer;
+        background-color: white;
+    }
+    
+    .pattern-grid td.selected {
+        background-color: var(--accent-color);
+        color: white;
+    }
+    
+    .pattern-actions {
+        margin-top: 15px;
+        text-align: center;
+    }
+    
+    /* Animaciones */
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.02); }
+        100% { transform: scale(1); }
+    }
+    
+    .pulse-animation {
+        animation: pulse 1.5s infinite;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .pattern-icon {
+            font-size: 2rem;
+        }
+        
+        .price-input {
+            max-width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h3 class="mb-0 text-white"><i class="fas fa-plus-circle me-2"></i>Crear Nueva Partida</h3>
+                </div>
+                
+                <form method="post" class="needs-validation" novalidate enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <!-- Mostrar errores generales -->
+                    {% if form.errors %}
+                    <div class="alert alert-danger mx-3 mt-3">
+                        <strong>Errores:</strong>
+                        <ul class="mb-0">
+                            {% for field, errors in form.errors.items %}
+                                {% for error in errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="card-body text-dark">
+                        <!-- Información de créditos -->
+                        <div class="credit-info">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="mb-1"><i class="fas fa-coins me-2"></i>Tus créditos</h5>
+                                    <p class="mb-0">Saldo disponible: <strong>{{ request.user.credit_balance }} créditos</strong></p>
+                                </div>
+                                <a href="{% url 'request_credits' %}" class="btn btn-outline-primary">
+                                    <i class="fas fa-plus-circle me-1"></i>Recargar
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Nombre y Contraseña -->
+                        <div class="row mb-4">
+                            <div class="col-md-8 mb-3">
+                                <label for="id_name" class="form-label">Nombre de la partida*</label>
+                                <input type="text" class="form-control {% if form.name.errors %}is-invalid{% endif %}" 
+                                       id="id_name" name="name" value="{{ form.name.value|default:'' }}" required>
+                                {% for error in form.name.errors %}
+                                    <div class="error-message">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="id_password" class="form-label">Contraseña (opcional)</label>
+                                <input type="password" class="form-control" id="id_password" name="password"
+                                       value="{{ form.password.value|default:'' }}">
+                            </div>
+                        </div>
+
+                        <!-- Premio y Precios -->
+                        <div class="row mb-4">
+                            <div class="col-md-4 mb-3">
+                                <label for="id_base_prize" class="form-label">Premio base (créditos)*</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-trophy"></i></span>
+                                    <input type="number" class="form-control {% if form.base_prize.errors %}is-invalid{% endif %}" 
+                                           id="id_base_prize" name="base_prize" min="0" step="1" 
+                                           value="{{ form.base_prize.value|default:'0' }}" required>
+                                </div>
+                                {% for error in form.base_prize.errors %}
+                                    <div class="error-message">{{ error }}</div>
+                                {% endfor %}
+                                <div class="form-text">Premio inicial del juego</div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="id_entry_price" class="form-label">Precio de entrada*</label>
+                                <div class="input-group price-input">
+                                    <span class="input-group-text"><i class="fas fa-ticket-alt"></i></span>
+                                    <input type="number" class="form-control {% if form.entry_price.errors %}is-invalid{% endif %}" 
+                                           id="id_entry_price" name="entry_price" min="0.5" step="0.5" 
+                                           value="{{ form.entry_price.value|default:'5.00' }}" required>
+                                </div>
+                                {% for error in form.entry_price.errors %}
+                                    <div class="error-message">{{ error }}</div>
+                                {% endfor %}
+                                <div class="form-text">Costo para unirse a la partida</div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="id_card_price" class="form-label">Precio por cartón extra*</label>
+                                <div class="input-group price-input">
+                                    <span class="input-group-text"><i class="fas fa-coins"></i></span>
+                                    <input type="number" class="form-control {% if form.card_price.errors %}is-invalid{% endif %}" 
+                                           id="id_card_price" name="card_price" min="0.5" step="0.5" 
+                                           value="{{ form.card_price.value|default:'1.00' }}" required>
+                                </div>
+                                {% for error in form.card_price.errors %}
+                                    <div class="error-message">{{ error }}</div>
+                                {% endfor %}
+                                <div class="form-text">Costo por cartón adicional</div>
+                            </div>
+                        </div>
+
+                        <!-- Premios Progresivos -->
+                        <div class="progressive-prize-container">
+                            <h5 class="mb-3"><i class="fas fa-chart-line me-2"></i>Premios Progresivos</h5>
+                            <p class="text-muted">Configura aumentos al premio base cuando se alcancen ciertos números de cartones vendidos</p>
+                            
+                            <div id="prize-tiers-container">
+                                <!-- Tier 1 (requerido) -->
+                                <div class="prize-tier">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-2">
+                                            <label class="form-label">Cartones requeridos*</label>
+                                            <input type="number" class="form-control progressive-target" 
+                                                   name="progressive_target[]" min="1" placeholder="Ej: 10" required>
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <label class="form-label">Aumento de premio*</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">+</span>
+                                                <input type="number" class="form-control progressive-prize" 
+                                                       name="progressive_prize[]" min="1" step="1" 
+                                                       placeholder="Ej: 5" required>
+                                                <span class="input-group-text">créditos</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button type="button" class="btn btn-outline-primary add-tier-btn" id="add-tier-btn">
+                                <i class="fas fa-plus-circle me-1"></i> Añadir otro nivel
+                            </button>
+                        </div>
+
+                        <!-- Configuración de juego -->
+                        <div class="row mb-4">
+                            <div class="col-md-4 mb-3">
+                                <label for="id_max_cards" class="form-label">Límite total de cartones*</label>
+                                
+                                <input 
+                                    type="number" 
+                                    class="form-control {% if form.max_cards_per_player.errors %}is-invalid{% endif %}" 
+                                    id="id_max_cards" 
+                                    name="max_cards_per_player" 
+                                    value="{{ form.max_cards_per_player.value|default_if_none:'' }}" 
+                                    required
+                                >
+
+                                {% for error in form.max_cards_per_player.errors %}
+                                    <div class="error-message">{{ error }}</div>
+                                {% endfor %}
+                                
+                                <div class="form-text">Máximo por jugador</div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="id_auto_call_interval" class="form-label">Intervalo llamadas (segundos)*</label>
+                                <input type="number" class="form-control {% if form.auto_call_interval.errors %}is-invalid{% endif %}" 
+                                       id="id_auto_call_interval" name="auto_call_interval" min="1" max="60" 
+                                       value="{{ form.auto_call_interval.value|default:'5' }}" required>
+                                {% for error in form.auto_call_interval.errors %}
+                                    <div class="error-message">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <!-- Modalidades de Juego -->
+                        <div class="mb-4">
+                            <h5 class="mb-3"><i class="fas fa-chess-board me-2"></i>Modalidad de Juego*</h5>
+                            <div class="row g-3">
+                                {% for value, label in form.winning_pattern.field.choices %}
+                                <div class="col-md-4">
+                                    <div class="pattern-card card p-3 text-center 
+                                        {% if form.winning_pattern.value == value or forloop.first and not form.winning_pattern.value %}selected{% endif %}"
+                                         onclick="selectPattern(this, '{{ value }}')">
+                                        <div class="pattern-icon">
+                                            {% if value == 'HORIZONTAL' %}
+                                                <i class="fas fa-grip-lines"></i>
+                                            {% elif value == 'VERTICAL' %}
+                                                <i class="fas fa-grip-lines-vertical"></i>
+                                            {% elif value == 'DIAGONAL' %}
+                                                <i class="fas fa-times"></i>
+                                            {% elif value == 'FULL' %}
+                                                <i class="fas fa-border-all"></i>
+                                            {% elif value == 'CORNERS' %}
+                                                <i class="fas fa-vector-square"></i>
+                                            {% elif value == 'CUSTOM' %}
+                                                <i class="fas fa-pencil-ruler"></i>
+                                            {% endif %}
+                                        </div>
+                                        <h6>{{ label }}</h6>
+                                        <small class="text-muted">
+                                            {% if value == 'HORIZONTAL' %}
+                                                Gana con 1 línea horizontal
+                                            {% elif value == 'VERTICAL' %}
+                                                Gana con 1 línea vertical
+                                            {% elif value == 'DIAGONAL' %}
+                                                Gana formando una X
+                                            {% elif value == 'FULL' %}
+                                                Gana completando todo el cartón
+                                            {% elif value == 'CORNERS' %}
+                                                Gana marcando las 4 esquinas
+                                            {% elif value == 'CUSTOM' %}
+                                                Gana con patrón personalizado
+                                            {% endif %}
+                                        </small>
+                                        <input type="radio" name="winning_pattern" value="{{ value }}" 
+                                               class="d-none" {% if form.winning_pattern.value == value or forloop.first and not form.winning_pattern.value %}checked{% endif %}>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% for error in form.winning_pattern.errors %}
+                                <div class="error-message">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Editor de Patrón Personalizado -->
+                        <div id="custom-pattern-container" class="custom-pattern-container" style="{% if form.winning_pattern.value != 'CUSTOM' %}display: none;{% endif %}">
+                            <h5 class="mb-3"><i class="fas fa-edit me-2"></i>Diseña tu Patrón Personalizado</h5>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Subir patrón desde archivo JSON (opcional)</label>
+                                <input type="file" class="form-control" name="pattern_file" accept=".json">
+                                <div class="form-text">Sube un archivo JSON con una matriz 5x5 (1=casilla requerida, 0=no requerida)</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">O crea tu patrón manualmente:</label>
+                                <table class="pattern-grid">
+                                    {% for row in "12345" %}
+                                    <tr>
+                                        {% for col in "12345" %}
+                                        <td onclick="togglePatternCell(this, {{ forloop.parentloop.counter0 }}, {{ forloop.counter0 }})"></td>
+                                        {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                </table>
+                                <input type="hidden" name="custom_pattern" id="custom_pattern_json" value='{% if form.custom_pattern.value %}{{ form.custom_pattern.value }}{% else %}[[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]]{% endif %}'>
+                            </div>
+                            
+                            <div class="pattern-actions">
+                                <button type="button" class="btn btn-outline-primary me-2" onclick="clearPattern()">
+                                    <i class="fas fa-trash-alt me-1"></i> Limpiar
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="fillPattern('X')">
+                                    <i class="fas fa-times me-1"></i> Patrón X
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary ms-2" onclick="fillPattern('border')">
+                                    <i class="fas fa-border-all me-1"></i> Borde
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer">
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'lobby' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary pulse-animation" id="submit-btn">
+                                <i class="fas fa-save me-2"></i>Crear Partida
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Selección de modalidad visual
+    function selectPattern(element, value) {
+        document.querySelectorAll('.pattern-card').forEach(card => {
+            card.classList.remove('selected');
+        });
+        element.classList.add('selected');
+        document.querySelector(`input[value="${value}"]`).checked = true;
+        
+        // Mostrar/ocultar editor de patrón personalizado
+        const customPatternContainer = document.getElementById('custom-pattern-container');
+        if (value === 'CUSTOM') {
+            customPatternContainer.style.display = 'block';
+            // Inicializar el patrón si no hay uno guardado
+            if (!document.getElementById('custom_pattern_json').value || 
+                document.getElementById('custom_pattern_json').value === '[[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]]') {
+                clearPattern();
+            } else {
+                // Cargar patrón existente
+                try {
+                    const pattern = JSON.parse(document.getElementById('custom_pattern_json').value);
+                    const cells = document.querySelectorAll('.pattern-grid td');
+                    let index = 0;
+                    for (let i = 0; i < 5; i++) {
+                        for (let j = 0; j < 5; j++) {
+                            if (pattern[i][j] === 1) {
+                                cells[index].classList.add('selected');
+                            }
+                            index++;
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error parsing custom pattern:', e);
+                    clearPattern();
+                }
+            }
+        } else {
+            customPatternContainer.style.display = 'none';
+        }
+    }
+    
+    // Toggle de celdas en el patrón personalizado
+    function togglePatternCell(cell, row, col) {
+        cell.classList.toggle('selected');
+        updatePatternJson();
+    }
+    
+    // Actualizar el JSON del patrón
+    function updatePatternJson() {
+        const pattern = [[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]];
+        const cells = document.querySelectorAll('.pattern-grid td');
+        
+        let index = 0;
+        for (let i = 0; i < 5; i++) {
+            for (let j = 0; j < 5; j++) {
+                if (cells[index].classList.contains('selected')) {
+                    pattern[i][j] = 1;
+                }
+                index++;
+            }
+        }
+        
+        document.getElementById('custom_pattern_json').value = JSON.stringify(pattern);
+    }
+    
+    // Limpiar el patrón
+    function clearPattern() {
+        document.querySelectorAll('.pattern-grid td').forEach(cell => {
+            cell.classList.remove('selected');
+        });
+        updatePatternJson();
+    }
+    
+    // Rellenar patrones predefinidos
+    function fillPattern(type) {
+        clearPattern();
+        const cells = document.querySelectorAll('.pattern-grid td');
+        
+        if (type === 'X') {
+            // Patrón en X
+            cells[0].classList.add('selected');  // 0,0
+            cells[6].classList.add('selected');  // 1,1
+            cells[12].classList.add('selected'); // 2,2
+            cells[18].classList.add('selected'); // 3,3
+            cells[24].classList.add('selected'); // 4,4
+            cells[4].classList.add('selected');  // 0,4
+            cells[8].classList.add('selected');  // 1,3
+            cells[16].classList.add('selected'); // 3,1
+            cells[20].classList.add('selected'); // 4,0
+        } else if (type === 'border') {
+            // Borde completo
+            for (let i = 0; i < 5; i++) {
+                cells[i].classList.add('selected');        // Primera fila
+                cells[i + 20].classList.add('selected');   // Última fila
+            }
+            cells[5].classList.add('selected');  // 1,0
+            cells[9].classList.add('selected');   // 1,4
+            cells[15].classList.add('selected');  // 3,0
+            cells[19].classList.add('selected');  // 3,4
+        }
+        
+        updatePatternJson();
+    }
+    
+    // Validación del formulario
+    (function () {
+        'use strict'
+        
+        const forms = document.querySelectorAll('.needs-validation');
+        const addTierBtn = document.getElementById('add-tier-btn');
+        const tiersContainer = document.getElementById('prize-tiers-container');
+        
+        // Añadir nuevo nivel de premio
+        addTierBtn.addEventListener('click', function() {
+            const newTier = document.createElement('div');
+            newTier.className = 'prize-tier mt-3';
+            newTier.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6 mb-2">
+                        <label class="form-label">Cartones requeridos</label>
+                        <input type="number" class="form-control progressive-target" 
+                               name="progressive_target[]" min="1" placeholder="Ej: 20">
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <label class="form-label">Aumento de premio</label>
+                        <div class="input-group">
+                            <span class="input-group-text">+</span>
+                            <input type="number" class="form-control progressive-prize" 
+                                   name="progressive_prize[]" min="1" step="1" placeholder="Ej: 10">
+                            <span class="input-group-text">créditos</span>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-danger remove-tier-btn">
+                    <i class="fas fa-trash-alt me-1"></i> Eliminar
+                </button>
+            `;
+            tiersContainer.appendChild(newTier);
+            
+            // Añadir evento al botón de eliminar
+            newTier.querySelector('.remove-tier-btn').addEventListener('click', function() {
+                tiersContainer.removeChild(newTier);
+            });
+        });
+        
+        // Validar antes de enviar
+        Array.from(forms).forEach(form => {
+            form.addEventListener('submit', function(event) {
+                event.preventDefault();
+                event.stopPropagation();
+                
+                // Validar premios progresivos
+                const targets = form.querySelectorAll('.progressive-target');
+                const prizes = form.querySelectorAll('.progressive-prize');
+                let progressivePrizes = [];
+                let isValid = true;
+                
+                for (let i = 0; i < targets.length; i++) {
+                    if (!targets[i].value || !prizes[i].value) {
+                        if (i === 0) { // El primer nivel es obligatorio
+                            targets[i].classList.add('is-invalid');
+                            prizes[i].classList.add('is-invalid');
+                            isValid = false;
+                        }
+                    } else {
+                        progressivePrizes.push({
+                            target: parseInt(targets[i].value),
+                            prize: parseFloat(prizes[i].value)
+                        });
+                    }
+                }
+                
+                // Ordenar por target
+                progressivePrizes.sort((a, b) => a.target - b.target);
+                
+                // Crear campo hidden con el JSON
+                const existingHidden = form.querySelector('input[name="progressive_prizes_json"]');
+                if (existingHidden) {
+                    existingHidden.value = JSON.stringify(progressivePrizes);
+                } else {
+                    const hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.name = 'progressive_prizes_json';
+                    hiddenInput.value = JSON.stringify(progressivePrizes);
+                    form.appendChild(hiddenInput);
+                }
+                
+                // Validar patrón personalizado si está seleccionado
+                const winningPattern = form.querySelector('input[name="winning_pattern"]:checked').value;
+                if (winningPattern === 'CUSTOM') {
+                    const customPattern = JSON.parse(document.getElementById('custom_pattern_json').value);
+                    let hasSelectedCells = false;
+                    
+                    for (let i = 0; i < 5; i++) {
+                        for (let j = 0; j < 5; j++) {
+                            if (customPattern[i][j] === 1) {
+                                hasSelectedCells = true;
+                                break;
+                            }
+                        }
+                        if (hasSelectedCells) break;
+                    }
+                    
+                    if (!hasSelectedCells) {
+                        alert('Debes seleccionar al menos una casilla para el patrón personalizado');
+                        isValid = false;
+                    }
+                }
+                
+                if (form.checkValidity() && isValid) {
+                    form.submit();
+                }
+                
+                form.classList.add('was-validated');
+            }, false);
+        });
+        
+        // Inicializar el patrón si ya hay uno
+        document.addEventListener('DOMContentLoaded', function() {
+            const winningPattern = document.querySelector('input[name="winning_pattern"]:checked').value;
+            if (winningPattern === 'CUSTOM') {
+                selectPattern(document.querySelector('.pattern-card.selected'), 'CUSTOM');
+            }
+        });
+    })();
+</script>
+{% endblock %}

@@ -1,0 +1,94 @@
+{% extends "bingo_app/base.html" %}
+
+{% block extra_css %}
+<style>
+    .proof-preview {
+        max-width: 100%;
+        max-height: 200px;
+        margin-top: 10px;
+        display: none;
+    }
+    .file-upload-label {
+        cursor: pointer;
+        padding: 10px;
+        border: 2px dashed #dee2e6;
+        border-radius: 5px;
+        text-align: center;
+    }
+    .file-upload-label:hover {
+        border-color: #0d6efd;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0"><i class="fas fa-coins me-2"></i>Solicitar Créditos</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" id="creditRequestForm">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="amount" class="form-label">Cantidad</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" id="amount" name="amount" 
+                                       class="form-control" min="1" step="0.01" 
+                                       required value="{{ request.POST.amount }}">
+                            </div>
+                            <div class="form-text">Mínimo $1.00</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="proof" class="form-label">Comprobante de pago</label>
+                            <input type="file" id="proof" name="proof" 
+                                   class="form-control d-none" accept="image/*,.pdf" required>
+                            <label for="proof" class="file-upload-label">
+                                <i class="fas fa-upload fa-2x mb-2"></i><br>
+                                <span id="file-name">Seleccionar archivo (PDF o imagen)</span>
+                            </label>
+                            <img id="proof-preview" class="proof-preview img-thumbnail" alt="Vista previa">
+                        </div>
+                        
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane me-2"></i>Enviar Solicitud
+                            </button>
+                            <a href="{% url 'profile' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+                <div class="card-footer text-muted">
+                    El saldo se acreditará en 24-48 horas después de la verificación
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('proof').addEventListener('change', function(e) {
+        const fileName = e.target.files[0]?.name || 'Seleccionar archivo (PDF o imagen)';
+        document.getElementById('file-name').textContent = fileName;
+        
+        // Mostrar vista previa si es imagen
+        const file = e.target.files[0];
+        if (file && file.type.startsWith('image/')) {
+            const preview = document.getElementById('proof-preview');
+            preview.style.display = 'block';
+            preview.src = URL.createObjectURL(file);
+        } else {
+            document.getElementById('proof-preview').style.display = 'none';
+        }
+    });
+</script>
+{% endblock %}

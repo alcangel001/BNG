@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Bingo Kusu{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        :root {
+            --primary-color: #2C3E50;  /* Azul oscuro para navbar */
+            --secondary-color: #14202b; /* Azul más oscuro para hover */
+            --accent-color: #E74C3C;   /* Rojo/accent para detalles */
+            --background-color: #161f2c; /* Fondo azul oscuro */
+            --card-bg: #2C3E50;        /* Fondo tarjetas */
+            --text-light: #ECF0F1;      /* Texto claro */
+            --text-muted: #BDC3C7;      /* Texto secundario */
+        }
+        
+        body {
+            background-color: var(--background-color);
+            color: var(--text-light);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+        
+        .navbar {
+            background-color: var(--primary-color) !important;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .main-container {
+            padding: 20px 0;
+        }
+        
+        footer {
+            background-color: var(--primary-color);
+            color: var(--text-light);
+            padding: 15px 0;
+            margin-top: 30px;
+        }
+        
+        .btn-primary {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: #C0392B;
+            border-color: #C0392B;
+        }
+        
+        .join-button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        .join-button:hover {
+            background-color: #C0392B;
+            transform: translateY(-2px);
+        }
+        
+        .alert {
+            background-color: rgba(255,255,255,0.1);
+            border: none;
+            color: var(--text-light);
+        }
+        
+        /* Estilo para los items de administración */
+        .admin-item {
+            background-color: rgba(231, 76, 60, 0.1);
+            border-left: 3px solid var(--accent-color);
+        }
+        
+        .admin-item:hover {
+            background-color: rgba(231, 76, 60, 0.2);
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'lobby' %}">
+                <i class="fas fa-dice me-2"></i>Bingo Kusu
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'lobby' %}">
+                            <i class="fas fa-home me-1"></i> Bingo
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'raffle_lobby' %}">
+                            <i class="fas fa-ticket-alt me-1"></i> Rifas
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'messaging' %}">
+                            <i class="fas fa-envelope me-1"></i> Mensajes
+                        </a>
+                    </li>
+                    {% if user.is_authenticated and user.is_organizer %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'organizer_dashboard' %}">
+                            <i class="fas fa-chart-line me-1"></i> Dashboard
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+                <ul class="navbar-nav ms-auto">
+                    {% if user.is_authenticated %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-user me-1"></i> {{ user.username }}
+                                <span id="credit-balance" class="badge bg-light text-dark ms-2">
+                                    {{ user.credit_balance }} créditos
+                                </span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="{% url 'profile' %}">
+                                    <i class="fas fa-user-circle me-1"></i> Perfil
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'request_credits' %}">
+                                    <i class="fas fa-coins me-1"></i> Solicitar Créditos
+                                </a></li>
+                                
+                                {% if user.is_organizer %}
+                                    <li><a class="dropdown-item" href="{% url 'create_game' %}">
+                                        <i class="fas fa-plus me-1"></i> Crear juego
+                                    </a></li>
+                                {% endif %}
+                                
+                                {% if user.is_staff %}
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><h6 class="dropdown-header text-uppercase text-warning">Administración</h6></li>
+                                    <li><a class="dropdown-item admin-item" href="{% url 'credit_requests_list' %}">
+                                        <i class="fas fa-list-check me-1"></i> Solicitudes de crédito
+                                    </a></li>
+                                    <li><a class="dropdown-item admin-item" href="{% url 'transaction_history' %}">
+                                        <i class="fas fa-history me-1"></i> Historial de transacciones
+                                    </a></li>
+                                    <li><a class="dropdown-item admin-item" href="{% url 'percentage_settings' %}">
+                                        <i class="fas fa-percent me-1"></i> Configuración de porcentajes
+                                    </a></li>
+                                {% endif %}
+                                
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form action="{% url 'logout' %}" method="post" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="dropdown-item" style="cursor:pointer;">
+                                            <i class="fas fa-sign-out-alt me-1"></i> Cerrar sesión
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'login' %}">
+                                <i class="fas fa-sign-in-alt me-1"></i> Ingresar
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'register' %}">
+                                <i class="fas fa-user-plus me-1"></i> Registrarse
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-container">
+        <div class="container">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+            
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <footer class="text-center">
+        <div class="container">
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    {% if user.is_authenticated %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+            const userId = "{{ request.user.id }}";
+
+            const userSocket = new WebSocket(
+                `${wsScheme}://${window.location.host}/ws/user/${userId}/notifications/`
+            );
+
+            userSocket.onopen = function(e) {
+                console.log("Conexión WebSocket establecida para notificaciones de usuario");
+            };
+
+            userSocket.onclose = function(e) {
+                console.log("Conexión WebSocket cerrada", e);
+                // Opcional: intentar reconectar después de un tiempo
+                setTimeout(function() {
+                    location.reload();
+                }, 5000);
+            };
+
+            userSocket.onerror = function(e) {
+                console.error("Error en WebSocket", e);
+            };
+
+            userSocket.onmessage = function(e) {
+                const data = JSON.parse(e.data);
+                
+                if (data.type === 'win_notification') {
+                    // Mostrar notificación con SweetAlert2
+                    Swal.fire({
+                        title: '¡Felicidades!',
+                        html: `<p>${data.message}</p><p>`,
+                        icon: 'success',
+                        confirmButtonText: 'Aceptar',
+                        background: '#2C3E50',
+                        color: '#ECF0F1',
+                        confirmButtonColor: '#E74C3C'
+                    });
+                    
+                    // Actualizar balance de créditos si está en el mensaje
+                    if (data.new_balance) {
+                        const creditElement = document.getElementById('credit-balance');
+                        if (creditElement) {
+                            creditElement.textContent = `${data.new_balance} créditos`;
+                        }
+                    }
+                }
+                
+                // Manejar actualización de créditos independiente
+                if (data.type === 'credit_update') {
+                    const creditElement = document.getElementById('credit-balance');
+                    if (creditElement) {
+                        creditElement.textContent = `${data.new_balance} créditos`;
+                    }
+                }
+            };
+        });
+    </script>
+    {% endif %}
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

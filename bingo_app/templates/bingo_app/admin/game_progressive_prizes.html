@@ -1,0 +1,80 @@
+{% extends "bingo_app/base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3>
+                        <i class="fas fa-dice me-2"></i>
+                        Premios Progresivos para {{ game.name }}
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h5>Añadir nuevo premio progresivo</h5>
+                        <form method="post">
+                            {% csrf_token %}
+                            {{ form.as_p }}
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-plus me-2"></i>Añadir Premio
+                            </button>
+                            <a href="{% url 'progressive_prizes' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Volver
+                            </a>
+                        </form>
+                    </div>
+                    
+                    <hr>
+                    
+                    <h5>Premios configurados</h5>
+                    {% if prizes %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Cartones Objetivo</th>
+                                    <th>Incremento</th>
+                                    <th>Descripción</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for prize in prizes %}
+                                <tr>
+                                    <td>{{ prize.target }}</td>
+                                    <td>{{ prize.prize_increase }} <i class="fas fa-coins"></i></td>
+                                    <td>{{ prize.description|default:"-" }}</td>
+                                    <td>
+                                        {% if prize.is_active %}
+                                        <span class="badge bg-success">Activo</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Inactivo</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'delete_progressive_prize' prize.id %}" 
+                                           class="btn btn-sm btn-danger"
+                                           onclick="return confirm('¿Eliminar este premio progresivo?')">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Este juego no tiene premios progresivos configurados.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

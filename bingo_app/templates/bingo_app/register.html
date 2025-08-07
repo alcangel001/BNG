@@ -1,0 +1,176 @@
+{% extends 'bingo_app/base.html' %}
+
+{% block content %}
+<div class="register-container" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 2rem;">
+    <div class="row justify-content-center align-items-center" style="min-height: calc(100vh - 4rem);">
+        <div class="col-md-8 col-lg-6 col-xl-5">
+            <div class="card shadow-lg border-0" style="border-radius: 20px; overflow: hidden;">
+                <!-- Header con imagen decorativa -->
+                <div class="card-header p-0" style="height: 120px; background: url('https://images.unsplash.com/photo-1635070041078-e363dbe005cb?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80') center/cover;">
+                    <div class="bg-primary bg-opacity-75 h-100 d-flex align-items-center justify-content-center">
+                        <h2 class="mb-0 text-white"><i class="fas fa-dice me-2"></i> BINGO KUSU</h2>
+                    </div>
+                </div>
+                
+                <div class="card-body p-4 p-sm-5">
+                    <h3 class="text-center mb-4" style="color: #764ba2;"><i class="fas fa-user-plus me-2"></i>Registro</h3>
+                    
+                    <form method="post" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Campo Usuario -->
+                        <div class="mb-4">
+                            <label for="id_username" class="form-label fw-bold" style="color: #5a5a5a;">Nombre de usuario</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="fas fa-user text-primary"></i></span>
+                                {{ form.username }}
+                            </div>
+                            <div class="invalid-feedback">
+                                Por favor ingresa un nombre de usuario válido.
+                            </div>
+                        </div>
+                        
+                        <!-- Campo Email -->
+                        <div class="mb-4">
+                            <label for="id_email" class="form-label fw-bold" style="color: #5a5a5a;">Correo electrónico</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="fas fa-envelope text-primary"></i></span>
+                                {{ form.email }}
+                            </div>
+                            <div class="invalid-feedback">
+                                Por favor ingresa un correo válido.
+                            </div>
+                        </div>
+                        
+                        <!-- Campo Contraseña -->
+                        <div class="mb-4">
+                            <label for="id_password1" class="form-label fw-bold" style="color: #5a5a5a;">Contraseña</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="fas fa-lock text-primary"></i></span>
+                                {{ form.password1 }}
+                                <button class="btn btn-outline-secondary toggle-password" type="button">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <div class="invalid-feedback">
+                                La contraseña debe tener al menos 8 caracteres.
+                            </div>
+                        </div>
+                        
+                        <!-- Confirmar Contraseña -->
+                        <div class="mb-4">
+                            <label for="id_password2" class="form-label fw-bold" style="color: #5a5a5a;">Confirmar contraseña</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="fas fa-lock text-primary"></i></span>
+                                {{ form.password2 }}
+                                <button class="btn btn-outline-secondary toggle-password" type="button">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <div class="invalid-feedback">
+                                Las contraseñas deben coincidir.
+                            </div>
+                        </div>
+                        
+                        <!-- Checkbox Organizador -->
+                        <div class="mb-4 form-check">
+                            {{ form.is_organizer }}
+                            <label class="form-check-label" for="id_is_organizer" style="color: #5a5a5a;">
+                                Quiero ser organizador (puedes crear salas de juego)
+                            </label>
+                        </div>
+                        
+                        <!-- Botón de Registro -->
+                        <button type="submit" class="btn btn-primary btn-lg w-100 mb-3" 
+                                style="background: linear-gradient(to right, #667eea, #764ba2); border: none; padding: 12px; font-weight: 600; letter-spacing: 1px;">
+                            <i class="fas fa-user-plus me-2"></i>REGISTRARME
+                        </button>
+                        {% if messages %}
+                        <div class="alert-messages">
+                            {% for message in messages %}
+                                <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}">
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        
+                        <!-- Enlace a login -->
+                        <div class="text-center">
+                            <p class="mb-0" style="color: #5a5a5a;">¿Ya tienes cuenta? 
+                                <a href="{% url 'login' %}" class="text-decoration-none fw-bold" style="color: #764ba2;">Inicia sesión aquí</a>
+                            </p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Validación del formulario
+(function() {
+    'use strict';
+    window.addEventListener('load', function() {
+        var forms = document.getElementsByClassName('needs-validation');
+        Array.prototype.filter.call(forms, function(form) {
+            form.addEventListener('submit', function(event) {
+                if (form.checkValidity() === false) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    }, false);
+    
+    // Toggle para mostrar/ocultar contraseña
+    document.querySelectorAll('.toggle-password').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const passwordInput = this.closest('.input-group').querySelector('input');
+            const icon = this.querySelector('i');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        });
+    });
+})();
+</script>
+
+<style>
+    .register-container {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .card {
+        transition: transform 0.3s ease;
+    }
+    .card:hover {
+        transform: translateY(-5px);
+    }
+    .form-control:focus {
+        border-color: #764ba2;
+        box-shadow: 0 0 0 0.25rem rgba(118, 75, 162, 0.25);
+    }
+    .btn-outline-secondary {
+        color: #764ba2;
+        border-color: #764ba2;
+    }
+    .btn-outline-secondary:hover {
+        background-color: #764ba2;
+        color: white;
+    }
+    .form-check-input:checked {
+        background-color: #764ba2;
+        border-color: #764ba2;
+    }
+</style>
+{% endblock %}

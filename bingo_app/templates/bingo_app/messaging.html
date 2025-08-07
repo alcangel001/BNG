@@ -1,0 +1,719 @@
+{% extends 'bingo_app/base.html' %}
+
+{% block title %}Mensajería - Bingo Online{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Estilos mejorados para la mensajería */
+    .messaging-container {
+        margin-top: 20px;
+        padding: 25px;
+        background: linear-gradient(145deg, #ffffff, #f8f9fa);
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        border: 1px solid rgba(0,0,0,0.05);
+    }
+    
+    .messages-container {
+        height: 500px;
+        overflow-y: auto;
+        border: 1px solid rgba(0,0,0,0.1);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 25px;
+        background-color: #ffffff;
+        scrollbar-width: thin;
+        scrollbar-color: var(--accent-color) #f0f0f0;
+    }
+    
+    .messages-container::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .messages-container::-webkit-scrollbar-track {
+        background: #f0f0f0;
+        border-radius: 3px;
+    }
+    
+    .messages-container::-webkit-scrollbar-thumb {
+        background-color: var(--accent-color);
+        border-radius: 3px;
+    }
+    
+    .message {
+        padding: 15px;
+        margin-bottom: 15px;
+        border-radius: 12px;
+        background-color: white;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+        border-left: 4px solid #6c757d;
+        transition: all 0.3s ease;
+    }
+    
+    .message:hover {
+        transform: translateX(3px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .message.unread {
+        border-left-color: var(--accent-color);
+        background-color: #f0f7ff;
+        animation: pulseUnread 2s ease-in-out infinite;
+    }
+    
+    @keyframes pulseUnread {
+        0% { box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.2); }
+        70% { box-shadow: 0 0 0 8px rgba(13, 110, 253, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(13, 110, 253, 0); }
+    }
+    
+    .message-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        align-items: center;
+    }
+    
+    .sender-info {
+        font-weight: bold;
+        color: var(--primary-color);
+        font-size: 1.05rem;
+    }
+    
+    .message-time {
+        color: #6c757d;
+        font-size: 0.85em;
+        background: rgba(0,0,0,0.03);
+        padding: 3px 8px;
+        border-radius: 12px;
+    }
+    
+    .message-content {
+        white-space: pre-wrap;
+        line-height: 1.6;
+        color: #495057;
+    }
+    
+    .user-badge {
+        font-size: 0.75em;
+        padding: 3px 8px;
+        border-radius: 12px;
+        margin-left: 8px;
+        font-weight: bold;
+    }
+    
+    .admin-badge {
+        background: linear-gradient(to right, #dc3545, #c82333);
+        color: white;
+    }
+    
+    .organizer-badge {
+        background: linear-gradient(to right, #fd7e14, #e67300);
+        color: white;
+    }
+    
+    /* Loader y estados mejorados */
+    .btn-loader {
+        display: inline-block;
+        width: 1.2rem;
+        height: 1.2rem;
+        border: 3px solid rgba(255,255,255,0.3);
+        border-radius: 50%;
+        border-top-color: #fff;
+        animation: spin 0.8s linear infinite;
+        margin-right: 10px;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    /* Estilos para pestañas y nuevos chats mejorados */
+    .unread-conversation {
+        border-left: 4px solid var(--accent-color);
+        background-color: #f8f9fa;
+        animation: pulseUnread 2s ease-in-out infinite;
+    }
+    
+    .new-chat-user {
+        transition: all 0.3s ease;
+        border-radius: 10px !important;
+    }
+    
+    .new-chat-user:hover {
+        background-color: #f0f7ff !important;
+        cursor: pointer;
+        transform: translateX(5px);
+    }
+    
+    #unread-badge {
+        font-size: 0.8em;
+        vertical-align: middle;
+        margin-left: 5px;
+    }
+    
+    .nav-tabs .nav-link {
+        border: none;
+        color: #6c757d;
+        font-weight: 500;
+        padding: 12px 20px;
+        border-radius: 10px 10px 0 0;
+    }
+    
+    .nav-tabs .nav-link.active {
+        font-weight: bold;
+        color: var(--primary-color);
+        background-color: transparent;
+        border-bottom: 3px solid var(--accent-color);
+    }
+    
+    .nav-tabs {
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    
+    /* Lista de conversaciones mejorada */
+    .conversation-item {
+        border-radius: 10px !important;
+        margin-bottom: 8px;
+        border: 1px solid rgba(0,0,0,0.05) !important;
+        transition: all 0.3s ease;
+    }
+    
+    .conversation-item:hover {
+        transform: translateX(5px);
+        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    }
+    
+    .conversation-item.active {
+        background-color: #f0f7ff !important;
+        border-left: 4px solid var(--accent-color) !important;
+    }
+    
+    /* Área de composición de mensajes mejorada */
+    .message-compose textarea {
+        border-radius: 12px !important;
+        border: 1px solid rgba(0,0,0,0.1);
+        resize: none;
+        padding: 15px;
+    }
+    
+    .message-compose textarea:focus {
+        box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.2);
+        border-color: var(--accent-color);
+    }
+    
+    #send-message-btn {
+        border-radius: 0 12px 12px 0 !important;
+        height: 100%;
+        padding: 0 20px;
+        background: linear-gradient(to right, var(--accent-color), #c0392b);
+        border: none;
+    }
+    
+    /* Panel de selección de conversación */
+    #no-conversation-selected {
+        background: rgba(0,0,0,0.02);
+        border-radius: 15px;
+        padding: 40px;
+        border: 2px dashed rgba(0,0,0,0.05);
+    }
+    
+    /* Barra de búsqueda mejorada */
+    #user-search {
+        border-radius: 12px 0 0 12px !important;
+        border-right: none;
+    }
+    
+    #search-btn {
+        border-radius: 0 12px 12px 0 !important;
+        background-color: white;
+        border-left: none;
+    }
+    
+    /* Badges mejorados */
+    .badge {
+        font-weight: 500;
+        padding: 5px 10px;
+        border-radius: 12px;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .messages-container {
+            height: 300px;
+        }
+        
+        .messaging-container {
+            padding: 15px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="messaging-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-envelope me-2"></i> Mensajería Privada</h2>
+        <span id="unread-count" class="badge bg-danger" style="font-size: 1rem; display: none;">0</span>
+    </div>
+    
+    <div class="row">
+        <!-- Panel de conversaciones -->
+        <div class="col-md-4">
+            <div class="mb-3">
+                <div class="input-group">
+                    <input type="text" id="user-search" class="form-control" placeholder="Buscar usuario...">
+                    <button class="btn btn-outline-secondary" type="button" id="search-btn">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Pestañas para alternar entre conversaciones y nuevos contactos -->
+            <ul class="nav nav-tabs mb-3" id="messagingTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="chats-tab" data-bs-toggle="tab" data-bs-target="#chats" type="button" role="tab">
+                        Conversaciones <span class="badge bg-primary" id="unread-badge">0</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="new-chat-tab" data-bs-toggle="tab" data-bs-target="#new-chat" type="button" role="tab">
+                        Nuevo Chat
+                    </button>
+                </li>
+            </ul>
+            
+            <div class="tab-content">
+                <!-- Pestaña de conversaciones existentes -->
+                <div class="tab-pane fade show active" id="chats" role="tabpanel">
+                    <div class="list-group" id="conversations-list">
+                        {% for conversation in conversations %}
+                        <a href="#" class="list-group-item list-group-item-action conversation-item {% if conversation.unread_count > 0 %}unread-conversation{% endif %}" 
+                           data-user-id="{{ conversation.other_user.id }}">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ conversation.other_user.username }}</strong>
+                                    {% if conversation.other_user.is_admin %}
+                                        <span class="user-badge admin-badge">Admin</span>
+                                    {% elif conversation.other_user.is_organizer %}
+                                        <span class="user-badge organizer-badge">Organizador</span>
+                                    {% endif %}
+                                </div>
+                                {% if conversation.unread_count > 0 %}
+                                <span class="badge bg-primary rounded-pill">{{ conversation.unread_count }}</span>
+                                {% endif %}
+                            </div>
+                            <small class="text-muted">{{ conversation.last_message|truncatechars:30 }}</small>
+                        </a>
+                        {% empty %}
+                        <div class="text-center py-3 text-muted">
+                            No tienes conversaciones aún
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- Pestaña para nuevos chats -->
+                <div class="tab-pane fade" id="new-chat" role="tabpanel">
+                    <div class="list-group">
+                        {% for user in users_without_chats %}
+                        <a href="#" class="list-group-item list-group-item-action new-chat-user" data-user-id="{{ user.id }}">
+                            <div>
+                                <strong>{{ user.username }}</strong>
+                                {% if user.is_admin %}
+                                    <span class="user-badge admin-badge">Admin</span>
+                                {% elif user.is_organizer %}
+                                    <span class="user-badge organizer-badge">Organizador</span>
+                                {% endif %}
+                            </div>
+                            <small class="text-muted">Haz clic para iniciar chat</small>
+                        </a>
+                        {% empty %}
+                        <div class="text-center py-3 text-muted">
+                            No hay nuevos usuarios disponibles para chatear
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Panel de mensajes -->
+        <div class="col-md-8">
+            <div id="selected-conversation" class="mb-3" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 id="conversation-with"></h4>
+                    <button id="refresh-messages" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+                
+                <div class="messages-container" id="messages-container">
+                    <!-- Los mensajes se cargarán aquí dinámicamente -->
+                </div>
+                
+                <div class="message-compose mt-3">
+                    <div class="input-group">
+                        <textarea id="message-content" class="form-control" placeholder="Escribe tu mensaje..." rows="3"></textarea>
+                        <button id="send-message-btn" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="no-conversation-selected" class="text-center py-5">
+                <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                <h4>Selecciona una conversación</h4>
+                <p class="text-muted">Elige un usuario de la lista para comenzar a chatear</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Variables globales
+    let currentRecipientId = null;
+    let messageSocket = null;
+    
+    // Inicialización cuando el DOM esté listo
+    document.addEventListener('DOMContentLoaded', function() {
+        // Configurar WebSocket
+        setupMessageWebSocket();
+        
+        // Cargar contador de no leídos
+        updateUnreadCount();
+        
+        // Manejar clic en conversaciones
+        document.querySelectorAll('.conversation-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                loadConversation(this.dataset.userId);
+            });
+        });
+        
+        // Manejar clic en usuarios nuevos
+        document.querySelectorAll('.new-chat-user').forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                const userId = this.dataset.userId;
+                startNewConversation(userId);
+            });
+        });
+        
+        // Manejar envío de mensajes
+        document.getElementById('send-message-btn').addEventListener('click', sendMessage);
+        document.getElementById('message-content').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        // Manejar búsqueda
+        document.getElementById('user-search').addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            
+            // Buscar en conversaciones existentes
+            document.querySelectorAll('.conversation-item').forEach(item => {
+                const username = item.querySelector('strong').textContent.toLowerCase();
+                item.style.display = username.includes(searchTerm) ? 'block' : 'none';
+            });
+            
+            // Buscar en nuevos contactos
+            document.querySelectorAll('.new-chat-user').forEach(item => {
+                const username = item.querySelector('strong').textContent.toLowerCase();
+                item.style.display = username.includes(searchTerm) ? 'block' : 'none';
+            });
+        });
+        
+        // Manejar refresco de mensajes
+        document.getElementById('refresh-messages').addEventListener('click', function() {
+            if (currentRecipientId) {
+                loadMessages(currentRecipientId);
+            }
+        });
+    });
+    
+    // Configurar WebSocket para mensajería
+    function setupMessageWebSocket() {
+        messageSocket = new WebSocket(`ws://${window.location.host}/ws/messages/`);
+        
+        messageSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            
+            if (data.type === 'new_message') {
+                // Si el mensaje es para la conversación actual
+                if (currentRecipientId && 
+                   (data.message.sender.id == currentRecipientId || data.message.recipient.id == currentRecipientId)) {
+                    addMessageToUI(data.message);
+                    scrollToBottom();
+                }
+                
+                // Actualizar contador de no leídos
+                updateUnreadCount();
+                
+                // Mostrar notificación si no es el remitente
+                if (data.message.sender.id != {{ request.user.id }}) {
+                    showNewMessageNotification(data.message);
+                }
+            }
+        };
+        
+        messageSocket.onclose = function(e) {
+            console.error('Conexión de mensajería cerrada:', e);
+            showToast('error', 'Conexión perdida', 'Intentando reconectar a la mensajería...');
+            // Intentar reconectar después de 5 segundos
+            setTimeout(setupMessageWebSocket, 5000);
+        };
+    }
+    
+    // Función para iniciar nueva conversación
+    async function startNewConversation(userId) {
+        // Cambiar a la pestaña de chats
+        document.getElementById('chats-tab').click();
+        
+        // Cargar la conversación (aunque no haya mensajes)
+        await loadConversation(userId);
+        
+        // Enfocar el campo de mensaje
+        document.getElementById('message-content').focus();
+    }
+    
+    // Cargar una conversación específica
+    async function loadConversation(userId) {
+        currentRecipientId = userId;
+        
+        // Resaltar conversación seleccionada
+        document.querySelectorAll('.conversation-item, .new-chat-user').forEach(item => {
+            item.classList.remove('active');
+            if (item.dataset.userId == userId) {
+                item.classList.add('active');
+            }
+        });
+        
+        // Mostrar panel de mensajes
+        document.getElementById('no-conversation-selected').style.display = 'none';
+        document.getElementById('selected-conversation').style.display = 'block';
+        
+        // Actualizar título
+        const selectedUser = document.querySelector(`[data-user-id="${userId}"] strong`).textContent;
+        document.getElementById('conversation-with').textContent = `Conversación con ${selectedUser}`;
+        
+        // Cargar mensajes
+        await loadMessages(userId);
+        
+        // Marcar mensajes como leídos
+        markConversationAsRead(userId);
+    }
+    
+    // Cargar mensajes de una conversación
+    async function loadMessages(userId) {
+        try {
+            const response = await fetch(`/api/messages/?user_id=${userId}`);
+            const data = await response.json();
+            
+            const container = document.getElementById('messages-container');
+            container.innerHTML = '';
+            
+            if (data.messages && data.messages.length > 0) {
+                data.messages.forEach(message => {
+                    addMessageToUI(message);
+                });
+            } else {
+                container.innerHTML = '<div class="text-center py-5 text-muted">No hay mensajes aún. Envía el primero!</div>';
+            }
+            
+            scrollToBottom();
+            
+        } catch (error) {
+            console.error('Error al cargar mensajes:', error);
+            showToast('error', 'Error', 'No se pudieron cargar los mensajes');
+        }
+    }
+    
+    // Añadir un mensaje a la interfaz
+    function addMessageToUI(message) {
+        const container = document.getElementById('messages-container');
+        
+        // Si el contenedor muestra el mensaje "no hay mensajes", limpiarlo
+        if (container.innerHTML.includes('No hay mensajes aún')) {
+            container.innerHTML = '';
+        }
+        
+        const isOwnMessage = message.sender.id == {{ request.user.id }};
+        
+        const messageElement = document.createElement('div');
+        messageElement.className = `message ${message.is_read || isOwnMessage ? '' : 'unread'}`;
+        messageElement.dataset.messageId = message.id;
+        
+        messageElement.innerHTML = `
+            <div class="message-header">
+                <span class="sender-info">
+                    ${message.sender.username}
+                    ${message.sender.is_admin ? '<span class="user-badge admin-badge">Admin</span>' : ''}
+                    ${message.sender.is_organizer ? '<span class="user-badge organizer-badge">Organizador</span>' : ''}
+                </span>
+                <span class="message-time">${new Date(message.timestamp).toLocaleString()}</span>
+            </div>
+            <div class="message-content">${message.content}</div>
+        `;
+        
+        container.appendChild(messageElement);
+    }
+    
+    // Enviar un mensaje
+    async function sendMessage() {
+        const content = document.getElementById('message-content').value.trim();
+        
+        if (!content) {
+            showToast('error', 'Error', 'El mensaje no puede estar vacío');
+            return;
+        }
+        
+        if (!currentRecipientId) {
+            showToast('error', 'Error', 'No hay destinatario seleccionado');
+            return;
+        }
+        
+        const btn = document.getElementById('send-message-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="btn-loader"></span> Enviando...';
+        
+        try {
+            const response = await fetch('/api/messages/send/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    recipient_id: currentRecipientId,
+                    content: content
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                document.getElementById('message-content').value = '';
+                
+                // Si es el primer mensaje, recargar la lista de conversaciones
+                if (document.querySelector(`.conversation-item[data-user-id="${currentRecipientId}"]`) === null) {
+                    // Aquí podrías recargar la página o actualizar la lista de conversaciones
+                    window.location.reload();
+                } else {
+                    addMessageToUI(data.message);
+                    scrollToBottom();
+                }
+                
+                updateUnreadCount();
+            } else {
+                showToast('error', 'Error', data.error || 'No se pudo enviar el mensaje');
+            }
+        } catch (error) {
+            console.error('Error al enviar mensaje:', error);
+            showToast('error', 'Error', 'No se pudo enviar el mensaje');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+        }
+    }
+    
+    // Marcar conversación como leída
+    async function markConversationAsRead(userId) {
+        try {
+            await fetch(`/api/messages/mark_read/?user_id=${userId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+            
+            // Actualizar interfaz
+            document.querySelectorAll(`.conversation-item[data-user-id="${userId}"] .badge`).forEach(badge => {
+                badge.remove();
+            });
+            
+            document.querySelectorAll('#messages-container .message.unread').forEach(msg => {
+                msg.classList.remove('unread');
+            });
+            
+            updateUnreadCount();
+            
+        } catch (error) {
+            console.error('Error al marcar como leído:', error);
+        }
+    }
+    
+    // Actualizar contador de mensajes no leídos
+    async function updateUnreadCount() {
+        try {
+            const response = await fetch('/api/messages/unread_count/');
+            const data = await response.json();
+            
+            const badge = document.getElementById('unread-count');
+            const tabBadge = document.getElementById('unread-badge');
+            
+            badge.textContent = data.unread_count;
+            badge.style.display = data.unread_count > 0 ? 'inline-block' : 'none';
+            
+            tabBadge.textContent = data.unread_count;
+            tabBadge.style.display = data.unread_count > 0 ? 'inline-block' : 'none';
+            
+        } catch (error) {
+            console.error('Error al obtener mensajes no leídos:', error);
+        }
+    }
+    
+    // Mostrar notificación de nuevo mensaje
+    function showNewMessageNotification(message) {
+        // Solo mostrar notificación si no está en la conversación actual
+        if (currentRecipientId != message.sender.id) {
+            showToast('info', 'Nuevo mensaje', `De: ${message.sender.username}`);
+        }
+    }
+    
+    // Función auxiliar para desplazarse al final
+    function scrollToBottom() {
+        const container = document.getElementById('messages-container');
+        container.scrollTop = container.scrollHeight;
+    }
+    
+    // Función para mostrar notificaciones toast
+    function showToast(icon, title, text) {
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer)
+                toast.addEventListener('mouseleave', Swal.resumeTimer)
+            }
+        });
+        
+        Toast.fire({ icon, title, text });
+    }
+    
+    // Función para obtener cookies
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}

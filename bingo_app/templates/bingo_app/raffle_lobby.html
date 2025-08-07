@@ -1,0 +1,420 @@
+{% extends "bingo_app/base.html" %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --secondary-gradient: linear-gradient(135deg, #28a745, #218838);
+        --accent-color: #ff6b6b;
+        --dark-color: #2c3e50;
+        --light-color: #f8f9fa;
+    }
+    
+    body {
+        
+        font-family: 'Poppins', sans-serif;
+    }
+    
+    .raffle-header {
+        background: var(--primary-gradient);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+        border-radius: 0 0 20px 20px;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    
+    .raffle-card {
+        border-radius: 20px;
+        border: none;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        overflow: hidden;
+        height: 100%;
+        background: #242572;
+    }
+    
+    .raffle-card:hover {
+        transform: translateY(-10px) scale(1.02);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    }
+    
+    .card-header {
+        background: var(--primary-gradient) !important;
+        border-bottom: none !important;
+        padding: 1.5rem !important;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .card-header::after {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 100%;
+        height: 200%;
+        background: rgba(255,255,255,0.1);
+        transform: rotate(30deg);
+    }
+    
+    .card-body {
+        padding: 2rem;
+        position: relative;
+    }
+    
+    .card-footer {
+        background: var(--light-color);
+        border-top: none !important;
+        padding: 1.5rem !important;
+        position: relative;
+    }
+    
+    .progress-container {
+        position: relative;
+        margin: 1.5rem 0;
+    }
+    
+    .progress {
+        height: 12px;
+        border-radius: 6px;
+        background-color: #e9ecef;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .progress-bar {
+        background: var(--secondary-gradient);
+        border-radius: 6px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .progress-bar::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(90deg, 
+                      rgba(255,255,255,0) 0%, 
+                      rgba(255,255,255,0.3) 50%, 
+                      rgba(255,255,255,0) 100%);
+        animation: shimmer 2s infinite;
+    }
+    
+    .badge-status {
+        font-size: 0.8rem;
+        padding: 0.5rem 1rem;
+        border-radius: 50px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    
+    .badge-waiting {
+        background: linear-gradient(135deg, #6c757d, #5a6268);
+        color: white;
+    }
+    
+    .badge-in_progress {
+        background: linear-gradient(135deg, #0d6efd, #0b5ed7);
+        color: white;
+    }
+    
+    .badge-finished {
+        background: linear-gradient(135deg, #28a745, #218838);
+        color: white;
+    }
+    
+    .prize-highlight {
+        color: var(--accent-color);
+        font-weight: 700;
+        font-size: 1.1rem;
+    }
+    
+    .list-group-item {
+        border-radius: 15px !important;
+        margin-bottom: 15px;
+        border: none;
+        transition: all 0.4s;
+        background: white;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        padding: 1.5rem;
+    }
+    
+    .list-group-item:hover {
+        transform: translateY(-5px) scale(1.02);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    
+    .btn-create-raffle {
+        border-radius: 50px;
+        font-weight: 600;
+        padding: 0.8rem 2rem;
+        transition: all 0.4s;
+        background: var(--secondary-gradient);
+        border: none;
+        letter-spacing: 0.5px;
+        box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+    }
+    
+    .btn-create-raffle:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
+    }
+    
+    .btn-view-details {
+        border-radius: 50px;
+        font-weight: 600;
+        transition: all 0.4s;
+        background: var(--primary-gradient);
+        border: none;
+        padding: 0.8rem;
+        letter-spacing: 0.5px;
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+    }
+    
+    .btn-view-details:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    }
+    
+    .icon-wrapper {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+    }
+    
+    .alert-premium {
+        border-radius: 15px;
+        border: none;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        background: white;
+        padding: 1.5rem;
+    }
+    
+    .countdown-timer {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--dark-color);
+        background: rgba(255,255,255,0.9);
+        padding: 0.5rem 1rem;
+        border-radius: 50px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        display: inline-block;
+    }
+    
+    @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .raffle-card {
+            margin-bottom: 2rem;
+        }
+        
+        .card-header, .card-body, .card-footer {
+            padding: 1.25rem !important;
+        }
+        
+        .btn-create-raffle {
+            padding: 0.6rem 1.5rem;
+            font-size: 0.9rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="raffle-header">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-2"><i class="fas fa-ticket-alt me-3"></i>Lobby de Rifas Premium</h1>
+                <p class="mb-0 opacity-75">Participa en emocionantes rifas y gana fabulosos premios</p>
+            </div>
+            {% if user.is_organizer %}
+            <a href="{% url 'create_raffle' %}" class="btn btn-create-raffle text-white">
+                <i class="fas fa-plus me-2"></i>Crear Nueva Rifa
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="container mb-5">
+    {% if active_raffles %}
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        {% for raffle in active_raffles %}
+        <div class="col">
+            <div class="card h-100 raffle-card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 text-white">{{ raffle.title }}</h5>
+                        <span class="badge-status badge-{{ raffle.status|lower }}">
+                            {{ raffle.get_status_display }}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <p class="text-muted">{{ raffle.description|default:"Descripción no disponible"|truncatechars:120 }}</p>
+                    </div>
+                    
+                    <div class="raffle-stats mb-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="icon-wrapper">
+                                <i class="fas fa-tag text-white"></i>
+                            </div>
+                            <div>
+                                <small class="text-muted d-block">Precio por ticket</small>
+                                <h5 class="mb-0">{{ raffle.ticket_price }} <i class="fas fa-coins"></i></h5>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="icon-wrapper">
+                                <i class="fas fa-trophy text-white"></i>
+                            </div>
+                            <div>
+                                <small class="text-muted d-block">Premio principal</small>
+                                <h5 class="mb-0 prize-highlight">{{ raffle.prize }} <i class="fas fa-coins"></i></h5>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted"><i class="fas fa-ticket-alt me-2"></i>Tickets vendidos</span>
+                            <strong>{{ raffle.tickets.count }}/{{ raffle.total_tickets }}</strong>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mb-3">
+                            <span class="text-muted"><i class="fas fa-calendar-alt me-2"></i>Fecha de sorteo</span>
+                            <strong>{{ raffle.draw_date|date:"d M Y H:i" }}</strong>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-container">
+                        <div class="d-flex justify-content-between mb-2">
+                            <small>Progreso</small>
+                            <small>{{ raffle.progress_percentage }}% completado</small>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar" 
+                                 style="width: {{ raffle.progress_percentage }}%" 
+                                 role="progressbar" 
+                                 aria-valuenow="{{ raffle.progress_percentage }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if raffle.status == 'waiting' %}
+                    <div class="countdown-timer mt-3">
+                        <i class="fas fa-clock me-2"></i>
+                        <span id="countdown-{{ raffle.id }}"></span>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer text-center">
+                    <a href="{% url 'raffle_detail' raffle.id %}" class="btn btn-view-details text-white w-100">
+                        <i class="fas fa-eye me-2"></i>Ver Detalles
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert-premium alert-info">
+        <div class="d-flex align-items-center">
+            <div class="icon-wrapper bg-info">
+                <i class="fas fa-info-circle text-white"></i>
+            </div>
+            <div>
+                <h5 class="mb-2">No hay rifas disponibles actualmente</h5>
+                <p class="mb-0">Revisa más tarde o crea una nueva rifa si eres organizador.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    {% if finished_raffles %}
+    <div class="mt-5 pt-4">
+        <h3 class="mb-4"><i class="fas fa-history me-3"></i>Rifas Recientemente Terminadas</h3>
+        <div class="list-group">
+            {% for raffle in finished_raffles %}
+            <a href="{% url 'raffle_detail' raffle.id %}" class="list-group-item list-group-item-action">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <div class="icon-wrapper bg-secondary">
+                            <i class="fas fa-trophy text-white"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-1">{{ raffle.title }}</h6>
+                            <small class="text-muted"><i class="fas fa-calendar-alt me-1"></i>Sorteada el {{ raffle.draw_date|date:"d M Y" }}</small>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="badge bg-success p-2">
+                            <i class="fas fa-crown me-1"></i>
+                            {% if raffle.winner %}
+                                {{ raffle.winner.username }}
+                            {% else %}
+                                No definido
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    // Inicializar contadores para rifas en espera
+    document.addEventListener('DOMContentLoaded', function() {
+        {% for raffle in active_raffles %}
+            {% if raffle.status == 'waiting' %}
+                initializeCountdown('countdown-{{ raffle.id }}', '{{ raffle.draw_date|date:"Y-m-d H:i:s" }}');
+            {% endif %}
+        {% endfor %}
+    });
+    
+    function initializeCountdown(elementId, endDateStr) {
+        const countdownElement = document.getElementById(elementId);
+        const endDate = new Date(endDateStr).getTime();
+        
+        function updateCountdown() {
+            const now = new Date().getTime();
+            const distance = endDate - now;
+            
+            if (distance < 0) {
+                countdownElement.innerHTML = "¡Sorteo en progreso!";
+                return;
+            }
+            
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+            
+            countdownElement.innerHTML = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+        }
+        
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+    }
+</script>
+{% endblock %}

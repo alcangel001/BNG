@@ -1,0 +1,206 @@
+{% extends "bingo_app/base.html" %}
+
+{% block title %}Panel de Organizador{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-card {
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        transition: transform 0.3s;
+        border: none;
+    }
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+    }
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+    }
+    .player-balance {
+        font-weight: bold;
+    }
+    .balance-positive {
+        color: #28a745;
+    }
+    .balance-low {
+        color: #ffc107;
+    }
+    .balance-negative {
+        color: #dc3545;
+    }
+    .player-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+        margin-right: 10px;
+    }
+    .search-box {
+        position: relative;
+        margin-bottom: 20px;
+    }
+    .search-box input {
+        padding-left: 40px;
+    }
+    .search-box i {
+        position: absolute;
+        left: 13px;
+        top: 12px;
+        color: #6c757d;
+    }
+    .pagination .page-item.active .page-link {
+        background-color: #6f42c1;
+        border-color: #6f42c1;
+    }
+    .pagination .page-link {
+        color: #6f42c1;
+    }
+    .bg-purple {
+        background-color: #6f42c1;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <!-- Tarjeta de Saldos de Jugadores -->
+            <div class="card dashboard-card mb-4">
+                <div class="card-header bg-purple text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4><i class="fas fa-wallet me-2"></i>Saldos de Todos los Jugadores</h4>
+                        <span class="badge bg-light text-dark">{{ all_players.paginator.count }} jugadores</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Buscador -->
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="playerSearch" class="form-control" placeholder="Buscar jugador...">
+                    </div>
+                    
+                    <!-- Tabla de jugadores -->
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="playersTable">
+                            <thead>
+                                <tr>
+                                    <th>Jugador</th>
+                                    <th>Saldo</th>
+                                    <th>Estado</th>
+                                    <th>Última actividad</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for player in all_players %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <img src="https://ui-avatars.com/api/?name={{ player.username|urlencode }}&background=random" 
+                                                 class="player-avatar" 
+                                                 alt="{{ player.username }}">
+                                            <span>{{ player.username }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="player-balance {% if player.credit_balance > 50 %}balance-positive{% elif player.credit_balance > 0 %}balance-low{% else %}balance-negative{% endif %}">
+                                        ${{ player.credit_balance|floatformat:2 }}
+                                    </td>
+                                    <td>
+                                        {% if player.credit_balance > 50 %}
+                                            <span class="badge bg-success">Alto</span>
+                                        {% elif player.credit_balance > 0 %}
+                                            <span class="badge bg-warning">Bajo</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Sin saldo</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if player.last_login %}
+                                            {{ player.last_login|timesince }}
+                                        {% else %}
+                                            Nunca
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="#" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editBalanceModal{{ player.id }}">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a href="{% url 'admin:bingo_app_user_change' player.id %}" class="btn btn-sm btn-outline-secondary">
+                                            <i class="fas fa-cog"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                
+                                <!-- Modal para editar saldo -->
+                                {% endfor %}
+                    
+                    <!-- Paginación -->
+                    {% if all_players.has_other_pages %}
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination justify-content-center mt-4">
+                            {% if all_players.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1" aria-label="First">
+                                    <span aria-hidden="true">&laquo;&laquo;</span>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ all_players.previous_page_number }}" aria-label="Previous">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                            
+                            {% for num in all_players.paginator.page_range %}
+                                {% if all_players.number == num %}
+                                <li class="page-item active"><a class="page-link" href="#">{{ num }}</a></li>
+                                {% elif num > all_players.number|add:'-3' and num < all_players.number|add:'3' %}
+                                <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if all_players.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ all_players.next_page_number }}" aria-label="Next">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ all_players.paginator.num_pages }}" aria-label="Last">
+                                    <span aria-hidden="true">&raquo;&raquo;</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Script para búsqueda en tiempo real -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('playerSearch');
+    const table = document.getElementById('playersTable');
+    const rows = table.getElementsByTagName('tr');
+    
+    searchInput.addEventListener('keyup', function() {
+        const searchText = this.value.toLowerCase();
+        
+        for (let i = 1; i < rows.length; i++) { // Comenzamos desde 1 para omitir el encabezado
+            const playerName = rows[i].getElementsByTagName('td')[0].textContent.toLowerCase();
+            if (playerName.includes(searchText)) {
+                rows[i].style.display = '';
+            } else {
+                rows[i].style.display = 'none';
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

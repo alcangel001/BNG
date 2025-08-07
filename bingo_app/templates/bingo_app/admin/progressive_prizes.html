@@ -1,0 +1,176 @@
+{% extends "bingo_app/base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3>
+                        <i class="fas fa-trophy me-2"></i>
+                        Administración de Premios Progresivos
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5><i class="fas fa-plus-circle me-2"></i>Añadir nuevo premio</h5>
+                            <form method="post" class="mb-4">
+                                {% csrf_token %}
+                                <div class="mb-3">
+                                    <label for="id_game" class="form-label">Juego específico (dejar vacío para premio global)</label>
+                                    {{ form.game }}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="id_target" class="form-label">Cartones/Tickets objetivo</label>
+                                    {{ form.target }}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="id_prize_increase" class="form-label">Incremento de premio</label>
+                                    {{ form.prize_increase }}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="id_description" class="form-label">Descripción</label>
+                                    {{ form.description }}
+                                </div>
+                                <div class="mb-3 form-check">
+                                    {{ form.is_active }}
+                                    <label class="form-check-label" for="id_is_active">Activo</label>
+                                </div>
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-save me-2"></i>Guardar Premio
+                                </button>
+                            </form>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="alert alert-info">
+                                <h5><i class="fas fa-info-circle me-2"></i>Instrucciones</h5>
+                                <ul class="mb-0">
+                                    <li>Para premios <strong>específicos</strong>: Seleccione un juego</li>
+                                    <li>Para premios <strong>globales</strong>: Deje el juego vacío</li>
+                                    <li>Los premios globales aplican a todos los juegos del tipo seleccionado</li>
+                                    <li>Los premios específicos solo aplican al juego seleccionado</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5><i class="fas fa-dice me-2"></i> Premios para Bingo</h5>
+                            {% if bingo_prizes %}
+                            <div class="table-responsive">
+                                <table class="table table-hover table-sm">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Juego</th>
+                                            <th>Objetivo</th>
+                                            <th>Incremento</th>
+                                            <th>Estado</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for prize in bingo_prizes %}
+                                        <tr>
+                                            <td>
+                                                {% if prize.game %}
+                                                <a href="{% url 'game_progressive_prizes' prize.game.id %}">{{ prize.game.name }}</a>
+                                                {% else %}
+                                                <span class="text-muted">Todos los juegos</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ prize.target }}</td>
+                                            <td>{{ prize.prize_increase }} <i class="fas fa-coins text-warning"></i></td>
+                                            <td>
+                                                {% if prize.is_active %}
+                                                <span class="badge bg-success">Activo</span>
+                                                {% else %}
+                                                <span class="badge bg-secondary">Inactivo</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <a href="{% url 'delete_progressive_prize' prize.id %}" 
+                                                   class="btn btn-sm btn-danger"
+                                                   onclick="return confirm('¿Eliminar este premio progresivo?')"
+                                                   title="Eliminar">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-circle me-2"></i>
+                                No hay premios progresivos configurados para Bingo.
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h5><i class="fas fa-ticket-alt me-2"></i> Premios para Rifas</h5>
+                            {% if raffle_prizes %}
+                            <div class="table-responsive">
+                                <table class="table table-hover table-sm">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Juego</th>
+                                            <th>Objetivo</th>
+                                            <th>Incremento</th>
+                                            <th>Estado</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for prize in raffle_prizes %}
+                                        <tr>
+                                            <td>
+                                                {% if prize.game %}
+                                                <a href="#">{{ prize.game.name }}</a>
+                                                {% else %}
+                                                <span class="text-muted">Todos los juegos</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ prize.target }}</td>
+                                            <td>{{ prize.prize_increase }} <i class="fas fa-coins text-warning"></i></td>
+                                            <td>
+                                                {% if prize.is_active %}
+                                                <span class="badge bg-success">Activo</span>
+                                                {% else %}
+                                                <span class="badge bg-secondary">Inactivo</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <a href="{% url 'delete_progressive_prize' prize.id %}" 
+                                                   class="btn btn-sm btn-danger"
+                                                   onclick="return confirm('¿Eliminar este premio progresivo?')"
+                                                   title="Eliminar">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-circle me-2"></i>
+                                No hay premios progresivos configurados para Rifas.
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+            
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

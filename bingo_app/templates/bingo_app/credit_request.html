@@ -1,0 +1,25 @@
+{% extends "bingo_app/base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h4>Solicitar Créditos</h4>
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label">Cantidad</label>
+                    {{ form.amount }}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Comprobante de pago</label>
+                    {{ form.proof }}
+                </div>
+                <button type="submit" class="btn btn-primary">Enviar Solicitud</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
