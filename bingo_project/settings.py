@@ -24,6 +24,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get("SECRET_KEY")
 
+CSRF_TRUSTED_ORIGINS = ['https://*.railway.app']
+
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
