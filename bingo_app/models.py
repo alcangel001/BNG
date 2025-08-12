@@ -1,4 +1,5 @@
 from asyncio.log import logger
+from datetime import timezone
 from decimal import Decimal
 from django.db import models
 from django.contrib.auth.models import AbstractUser
@@ -582,3 +583,36 @@ class FlashMessage(models.Model):
     
     def __str__(self):
         return f"{self.user.username}: {self.message[:50]}..."
+    
+
+
+class WithdrawalRequest(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pendiente'),
+        ('APPROVED', 'Aprobado'),
+        ('REJECTED', 'Rechazado'),
+        ('COMPLETED', 'Completado'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='withdrawal_requests')
+    amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0.01)])
+    bank_name = models.CharField(max_length=100)
+    account_number = models.CharField(max_length=50)
+    account_holder_name = models.CharField(max_length=100)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    created_at = models.DateTimeField(auto_now_add=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+    admin_notes = models.TextField(blank=True)
+    transaction_reference = models.CharField(max_length=100, blank=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Solicitud de Retiro'
+        verbose_name_plural = 'Solicitudes de Retiro'
+    
+    def __str__(self):
+        return f"Retiro de {self.user.username} - ${self.amount} - {self.get_status_display()}"
+    
+    def save(self, *args, **kwargs):
+        # Si el estado cambia, actualizar la fecha de procesamiento
+        super().save(*args, **kwargs)

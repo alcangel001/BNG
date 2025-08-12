@@ -1,0 +1,84 @@
+{% extends 'bingo_app/base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    .white-text, 
+    .white-text th, 
+    .white-text td,
+    .white-text a:not(.btn) {
+        color: white !important;
+    }
+    
+    .table-striped tbody tr:nth-of-type(odd) {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .nav-tabs .nav-link {
+        color: white;
+    }
+    
+    .nav-tabs .nav-link.active {
+        color: #495057;
+        background-color: white;
+    }
+    
+    h2 {
+        color: white !important;
+    }
+</style>
+
+<div class="container mt-4 white-text">
+    <h2>Solicitudes de Retiro</h2>
+    
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link {% if section == 'pending' %}active{% endif %}" 
+               href="{% url 'withdrawal_requests' %}">Pendientes</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if section == 'all' %}active{% endif %}" 
+               href="{% url 'all_withdrawal_requests' %}">Todas</a>
+        </li>
+    </ul>
+    
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Usuario</th>
+                    <th>Monto</th>
+                    <th>Banco</th>
+                    <th>Cuenta</th>
+                    <th>Fecha</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in requests %}
+                <tr>
+                    <td>{{ req.id }}</td>
+                    <td>{{ req.user.username }}</td>
+                    <td>{{ req.amount }}</td>
+                    <td>{{ req.bank_name }}</td>
+                    <td>{{ req.account_number }}</td>
+                    <td>{{ req.created_at|date:"d/m/Y H:i" }}</td>
+                    <td>{{ req.get_status_display }}</td>
+                    <td>
+                        <a href="{% url 'process_withdrawal' req.id %}" class="btn btn-sm btn-info">
+                            Gestionar
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center">No hay solicitudes</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

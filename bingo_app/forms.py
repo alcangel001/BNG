@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.core.validators import MinValueValidator
 import json
-from .models import User, Game, CreditRequest, Raffle, PercentageSettings
+from .models import User, Game, CreditRequest, Raffle, PercentageSettings, WithdrawalRequest
 
 class RegistrationForm(UserCreationForm):
     is_organizer = forms.BooleanField(
@@ -188,3 +188,23 @@ class PercentageSettingsForm(forms.ModelForm):
                 )
         
         return cleaned_data
+    
+
+class WithdrawalRequestForm(forms.ModelForm):
+    class Meta:
+        model = WithdrawalRequest
+        fields = ['amount', 'bank_name', 'account_number', 'account_holder_name']
+        widgets = {
+            'amount': forms.NumberInput(attrs={'min': 0.01, 'step': 0.01}),
+        }
+        labels = {
+            'amount': 'Monto a retirar',
+            'bank_name': 'Nombre del banco',
+            'account_number': 'Número de cuenta',
+            'account_holder_name': 'Nombre del titular',
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields:
+            self.fields[field].widget.attrs.update({'class': 'form-control'})

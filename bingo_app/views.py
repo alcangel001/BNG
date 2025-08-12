@@ -19,10 +19,10 @@ from channels.layers import get_channel_layer  # Para enviar mensajes via WebSoc
 from .flash_messages import add_flash_message
 
 
-from .forms import PercentageSettingsForm, RegistrationForm, GameForm, BuyTicketForm, RaffleForm, CreditRequestForm
+from .forms import PercentageSettingsForm, RegistrationForm, GameForm, BuyTicketForm, RaffleForm, CreditRequestForm, WithdrawalRequestForm
 from .models import (
     User, Game, Player, ChatMessage, Raffle, Ticket, 
-    Transaction, Message, CreditRequest, PercentageSettings
+    Transaction, Message, CreditRequest, PercentageSettings, WithdrawalRequest
 )
 
 def register(request):
@@ -1173,3 +1173,130 @@ def draw_raffle(request, raffle_id):
         logger.error(f"Error en draw_raffle: {str(e)}", exc_info=True)
     
     return redirect('raffle_detail', raffle_id=raffle.id)
+
+
+@login_required
+def request_withdrawal(request):
+    if request.method == 'POST':
+        form = WithdrawalRequestForm(request.POST)
+        if form.is_valid():
+            amount = form.cleaned_data['amount']
+            
+            # Verificar que el usuario tenga suficiente saldo
+            if request.user.credit_balance < amount:
+                messages.error(request, 'Saldo insuficiente para este retiro')
+                return render(request, 'bingo_app/request_withdrawal.html', {'form': form})
+            
+            try:
+                with transaction.atomic():
+                    # Crear la solicitud de retiro
+                    withdrawal = form.save(commit=False)
+                    withdrawal.user = request.user
+                    withdrawal.status = 'PENDING'
+                    withdrawal.save()
+                    
+                    # Descontar los créditos del usuario
+                    request.user.credit_balance -= amount
+                    request.user.save()
+                    
+                    # Registrar la transacción
+                    Transaction.objects.create(
+                        user=request.user,
+                        amount=-amount,
+                        transaction_type='WITHDRAWAL',
+                        description=f"Solicitud de retiro #{withdrawal.id}",
+                        related_game=None
+                    )
+                    
+                    messages.success(request, 'Solicitud de retiro enviada. Los créditos han sido reservados.')
+                    return redirect('profile')
+                    
+            except Exception as e:
+                messages.error(request, f'Error al procesar la solicitud: {str(e)}')
+    else:
+        form = WithdrawalRequestForm(initial={
+            'account_holder_name': request.user.get_full_name() or request.user.username
+        })
+    
+    return render(request, 'bingo_app/request_withdrawal.html', {
+        'form': form,
+        'current_balance': request.user.credit_balance
+    })
+
+@staff_member_required
+def withdrawal_requests(request):
+    requests = WithdrawalRequest.objects.filter(status='PENDING').order_by('created_at')
+    return render(request, 'bingo_app/admin/withdrawal_requests.html', {
+        'requests': requests,
+        'section': 'pending'
+    })
+
+@staff_member_required
+def all_withdrawal_requests(request):
+    requests = WithdrawalRequest.objects.all().order_by('-created_at')
+    status_filter = request.GET.get('status')
+    
+    if status_filter:
+        requests = requests.filter(status=status_filter)
+    
+    return render(request, 'bingo_app/admin/withdrawal_requests.html', {
+        'requests': requests,
+        'section': 'all'
+    })
+
+@staff_member_required
+def process_withdrawal(request, request_id):
+    withdrawal = get_object_or_404(WithdrawalRequest, id=request_id)
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        notes = request.POST.get('admin_notes', '')
+        
+        try:
+            with transaction.atomic():
+                if action == 'approve':
+                    # Marcar como aprobado (el admin debe hacer la transferencia manualmente)
+                    withdrawal.status = 'APPROVED'
+                    withdrawal.admin_notes = notes
+                    withdrawal.save()
+                    
+                    messages.success(request, 'Retiro aprobado. Ahora puedes proceder con la transferencia bancaria.')
+                
+                elif action == 'complete':
+                    # Marcar como completado (después de hacer la transferencia)
+                    withdrawal.status = 'COMPLETED'
+                    withdrawal.transaction_reference = request.POST.get('transaction_reference', '')
+                    withdrawal.admin_notes = notes
+                    withdrawal.save()
+                    
+                    messages.success(request, 'Retiro marcado como completado.')
+                
+                elif action == 'reject':
+                    # Rechazar y devolver los créditos al usuario
+                    withdrawal.status = 'REJECTED'
+                    withdrawal.admin_notes = notes
+                    withdrawal.save()
+                    
+                    # Devolver los créditos al usuario
+                    withdrawal.user.credit_balance += withdrawal.amount
+                    withdrawal.user.save()
+                    
+                    # Registrar la transacción de devolución
+                    Transaction.objects.create(
+                        user=withdrawal.user,
+                        amount=withdrawal.amount,
+                        transaction_type='WITHDRAWAL_REFUND',
+                        description=f"Reembolso de retiro rechazado #{withdrawal.id}",
+                        related_game=None
+                    )
+                    
+                    messages.success(request, 'Retiro rechazado y créditos devueltos al usuario.')
+                
+                return redirect('withdrawal_requests')
+                
+        except Exception as e:
+            messages.error(request, f'Error al procesar la solicitud: {str(e)}')
+    
+    return render(request, 'bingo_app/admin/process_withdrawal.html', {
+        'withdrawal': withdrawal
+    })

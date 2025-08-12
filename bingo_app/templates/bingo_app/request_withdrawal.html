@@ -1,0 +1,36 @@
+{% extends 'bingo_app/base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    /* Estilo para que el texto del formulario se vea negro */
+    .form-text-black label,
+    .form-text-black input,
+    .form-text-black select,
+    .form-text-black textarea,
+    .form-text-black {
+        color: #000;
+    }
+</style>
+
+<div class="container mt-4">
+    <h2>Solicitar Retiro</h2>
+    <div class="card">
+        <div class="card-body">
+            <p class="text-muted">Saldo disponible: {{ current_balance }} créditos</p>
+
+            <form method="post" class="form-text-black">
+                {% csrf_token %}
+                {{ form.as_p }}
+
+                <div class="form-group mt-3">
+                    <button type="submit" class="btn btn-primary">
+                        Solicitar Retiro
+                    </button>
+                    <a href="{% url 'profile' %}" class="btn btn-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,95 @@
+{% extends 'bingo_app/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Gestionar Retiro #{{ withdrawal.id }}</h2>
+    
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Detalles del Retiro</h5>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item">
+                    <strong>Usuario:</strong> {{ withdrawal.user.username }}
+                </li>
+                <li class="list-group-item">
+                    <strong>Monto:</strong> {{ withdrawal.amount }} créditos
+                </li>
+                <li class="list-group-item">
+                    <strong>Banco:</strong> {{ withdrawal.bank_name }}
+                </li>
+                <li class="list-group-item">
+                    <strong>Número de Cuenta:</strong> {{ withdrawal.account_number }}
+                </li>
+                <li class="list-group-item">
+                    <strong>Titular:</strong> {{ withdrawal.account_holder_name }}
+                </li>
+                <li class="list-group-item">
+                    <strong>Estado:</strong> {{ withdrawal.get_status_display }}
+                </li>
+                <li class="list-group-item">
+                    <strong>Solicitado:</strong> {{ withdrawal.created_at|date:"d/m/Y H:i" }}
+                </li>
+            </ul>
+        </div>
+    </div>
+    
+    {% if withdrawal.status == 'PENDING' %}
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Acciones</h5>
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="form-group">
+                    <label for="admin_notes">Notas:</label>
+                    <textarea name="admin_notes" id="admin_notes" rows="3" class="form-control">{{ withdrawal.admin_notes }}</textarea>
+                </div>
+                
+                <div class="btn-group" role="group">
+                    <button type="submit" name="action" value="approve" class="btn btn-success">
+                        Aprobar
+                    </button>
+                    <button type="submit" name="action" value="reject" class="btn btn-danger">
+                        Rechazar
+                    </button>
+                    <a href="{% url 'withdrawal_requests' %}" class="btn btn-secondary">
+                        Cancelar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% elif withdrawal.status == 'APPROVED' %}
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Marcar como Completado</h5>
+            <p>Después de realizar la transferencia bancaria, marca esta solicitud como completada.</p>
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="form-group">
+                    <label for="transaction_reference">Referencia de Transferencia:</label>
+                    <input type="text" name="transaction_reference" id="transaction_reference" 
+                           class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="admin_notes">Notas:</label>
+                    <textarea name="admin_notes" id="admin_notes" rows="3" class="form-control">{{ withdrawal.admin_notes }}</textarea>
+                </div>
+                
+                <button type="submit" name="action" value="complete" class="btn btn-primary">
+                    Marcar como Completado
+                </button>
+                <a href="{% url 'withdrawal_requests' %}" class="btn btn-secondary">
+                    Volver
+                </a>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

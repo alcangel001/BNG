@@ -24,6 +24,8 @@ urlpatterns = [
     path('raffles/<int:raffle_id>/draw/', views.draw_raffle, name='draw_raffle'),
     path('messaging/', views.messaging, name='messaging'),
     path('organizer-dashboard/', views.organizer_dashboard, name='organizer_dashboard'),
+    path('withdraw/', views.request_withdrawal, name='request_withdrawal'),
+
 
 
     path('credit/', include([
@@ -37,7 +39,9 @@ urlpatterns = [
             path('transactions/', views.transaction_history, name='transaction_history'),
             path('transactions/user/<int:user_id>/', views.transaction_history, name='user_transactions'),
             path('percentages/', views.percentage_settings, name='percentage_settings'),
-    
+            path('admin/withdrawals/', views.withdrawal_requests, name='withdrawal_requests'),
+            path('admin/withdrawals/all/', views.all_withdrawal_requests, name='all_withdrawal_requests'),
+            path('admin/withdrawals/<int:request_id>/', views.process_withdrawal, name='process_withdrawal')
         ])),
     ])),
   

@@ -111,6 +111,11 @@
                             <i class="fas fa-envelope me-1"></i> Mensajes
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'request_withdrawal' %}">
+                            <i class="fas fa-money-bill-wave"></i> Retiros
+                        </a>
+                    </li>
                     {% if user.is_authenticated and user.is_organizer %}
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'organizer_dashboard' %}">
@@ -154,6 +159,11 @@
                                     <li><a class="dropdown-item admin-item" href="{% url 'percentage_settings' %}">
                                         <i class="fas fa-percent me-1"></i> Configuración de porcentajes
                                     </a></li>
+                                    <li>
+                                        <a class="dropdown-item admin-item" href="{% url 'withdrawal_requests' %}">
+                                            <i class="fas fa-money-bill-wave"></i> Retiros
+                                        </a>
+                                    </li>
                                 {% endif %}
                                 
                                 <li><hr class="dropdown-divider"></li>
