@@ -744,7 +744,7 @@
     const autoCallInterval = {{ game.auto_call_interval }};
     const cardPrice = parseFloat("{{ game.card_price }}");
     const maxCards = parseInt("{{ game.max_cards_per_player }}");
-    const playerCardsCount = parseInt("{{ player.cards|length }}");
+    let playerCardsCount = parseInt("{{ player.cards|length }}");
     const winningPattern = "{{ game.get_winning_pattern_display }}";
     let currentPrize = parseFloat("{{ game.current_prize|default:0 }}");
     let maxCardsSold = parseInt("{{ game.max_cards_sold }}");
@@ -754,7 +754,7 @@
     const buyCardBtn = document.getElementById('buy-card-btn');
     
     // WebSocket
-    const socket = new WebSocket(`wss://${window.location.host}/game/${gameId}/`);
+    const socket = new WebSocket(`ws://${window.location.host}/game/${gameId}/`);
     
     // ==================== Funciones para actualizar premio y progreso ====================
     function updatePrizeDisplay(newPrize, increaseAmount = 0) {
@@ -1206,39 +1206,61 @@
     // ==================== Eventos del DOM ====================
     // Comprar cartón
     buyCardBtn.addEventListener('click', async () => {
-        buyCardBtn.disabled = true;
-        buyCardBtn.innerHTML = '<span class="btn-loader"></span> Procesando...';
-        
-        try {
-            const response = await fetch(`/game/${gameId}/buy-card/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': getCookie('csrftoken'),
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({})
-            });
-            
-            const result = await response.json();
-            
-            if (!result.success) {
-                showToast('error', 'Error', result.error || 'No se pudo completar la compra');
-                // Solo reactivar el botón si hay un error y el usuario puede comprar más
-                if (playerCardsCount < maxCards && !isGameStarted && !isGameFinished) {
-                    buyCardBtn.disabled = false;
-                }
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            showToast('error', 'Error', 'No se pudo completar la compra');
-            // Solo reactivar el botón si hay un error y el usuario puede comprar más
-            if (playerCardsCount < maxCards && !isGameStarted && !isGameFinished) {
-                buyCardBtn.disabled = false;
-            }
-        } finally {
-            buyCardBtn.innerHTML = '<i class="fas fa-shopping-cart me-1"></i> Comprar Cartón';
-        }
+    const { isConfirmed } = await Swal.fire({
+        title: '¿Confirmar compra?',
+        text: `¿Estás seguro que deseas comprar un cartón por ${cardPrice} créditos?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, comprar',
+        cancelButtonText: 'Cancelar',
+        reverseButtons: true
     });
+    
+    if (!isConfirmed) return;
+    
+    buyCardBtn.disabled = true;
+    buyCardBtn.innerHTML = '<span class="btn-loader"></span> Procesando...';
+    
+    try {
+        const response = await fetch(`/game/${gameId}/buy-card/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({})
+        });
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            showToast('error', 'Error', result.error || 'No se pudo completar la compra');
+            buyCardBtn.disabled = playerCardsCount >= maxCards || isGameStarted || isGameFinished;
+            return;
+        }
+        
+        // Actualizaciones visuales
+        playerCardsCount += 1;
+        document.querySelector('h3.mb-3').textContent = `Tus Cartones (${playerCardsCount}/${maxCards})`;
+        
+        const balanceElement = document.querySelector('.credit-balance');
+        balanceElement.textContent = (parseFloat(balanceElement.textContent) - cardPrice).toFixed(2);
+        
+        addNewCardToUI(result.new_card, playerCardsCount);
+        showToast('success', '¡Cartón comprado!', `Se han descontado ${cardPrice} créditos`);
+        
+        // Actualizar estado del botón basado en las nuevas condiciones
+        const canBuyMore = playerCardsCount < maxCards && !isGameStarted && !isGameFinished;
+        buyCardBtn.disabled = !canBuyMore;
+        
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('error', 'Error', 'No se pudo completar la compra');
+        buyCardBtn.disabled = playerCardsCount >= maxCards || isGameStarted || isGameFinished;
+    } finally {
+        buyCardBtn.innerHTML = '<i class="fas fa-shopping-cart me-1"></i> Comprar Cartón';
+    }
+});
     
     // Chat
     document.querySelector('#chat-message-submit').addEventListener('click', sendChatMessage);

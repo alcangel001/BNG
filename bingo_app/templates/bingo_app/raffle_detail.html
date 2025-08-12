@@ -284,6 +284,77 @@
         color: #000;
     }
     
+    /* Estilos para el modal de confirmación */
+    .confirm-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1050;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+        color: #000
+    }
+    
+    .confirm-modal.show {
+        opacity: 1;
+        visibility: visible;
+    }
+    
+    .confirm-dialog {
+        background: white;
+        color: #000;
+        border-radius: 15px;
+        width: 90%;
+        max-width: 500px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        transform: translateY(-20px);
+        transition: all 0.3s ease;
+    }
+    
+    .confirm-modal.show .confirm-dialog {
+        transform: translateY(0);
+    }
+    
+    .confirm-header {
+        padding: 1.5rem;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        align-items: center;
+        color: #000
+    }
+    
+    .confirm-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--primary-gradient);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+    }
+    
+    .confirm-body {
+        padding: 2rem;
+        color: #000;
+    }
+    
+    .confirm-footer {
+        padding: 1rem 1.5rem;
+        border-top: 1px solid #eee;
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+    }
+    
     /* Responsive */
     @media (max-width: 992px) {
         .ticket-grid {
@@ -464,10 +535,10 @@
                         {% endfor %}
                     {% else %}
                         {% if raffle.status == 'WAITING' or raffle.status == 'IN_PROGRESS' %}
-                        <form method="post" class="d-inline">
+                        <form method="post" class="d-inline" id="ticket-form-{{ number }}" data-number="{{ number }}">
                             {% csrf_token %}
                             <input type="hidden" name="number" value="{{ number }}">
-                            <button type="submit" class="ticket-number ticket-available w-100 border-0 bg-transparent">
+                            <button type="button" class="ticket-number ticket-available w-100 border-0 bg-transparent buy-ticket-btn">
                                 {{ number }}
                             </button>
                         </form>
@@ -505,11 +576,72 @@
         </div>
     </div>
 </div>
+
+<!-- Modal de confirmación de compra -->
+<div class="confirm-modal" id="confirmModal">
+    <div class="confirm-dialog">
+        <div class="confirm-header">
+            <div class="confirm-icon">
+                <i class="fas fa-ticket-alt"></i>
+            </div>
+            <h5 class="mb-0">Confirmar compra</h5>
+        </div>
+        <div class="confirm-body">
+            <p>¿Estás seguro de que deseas comprar el ticket <strong id="ticketNumber"></strong> por <strong>{{ raffle.ticket_price }} <i class="fas fa-coins"></i></strong>?</p>
+            <p class="small text-muted">Esta acción no se puede deshacer.</p>
+        </div>
+        <div class="confirm-footer">
+            <button type="button" class="btn btn-secondary" id="cancelBtn">Cancelar</button>
+            <button type="button" class="btn btn-primary" id="confirmBtn">Confirmar compra</button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Variables para el modal de confirmación
+    const confirmModal = document.getElementById('confirmModal');
+    const ticketNumber = document.getElementById('ticketNumber');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const confirmBtn = document.getElementById('confirmBtn');
+    let currentForm = null;
+    
+    // Mostrar modal de confirmación al hacer clic en un ticket
+    document.querySelectorAll('.buy-ticket-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const form = this.closest('form');
+            const number = form.dataset.number;
+            
+            currentForm = form;
+            ticketNumber.textContent = '#' + number;
+            confirmModal.classList.add('show');
+        });
+    });
+    
+    // Cancelar compra
+    cancelBtn.addEventListener('click', function() {
+        confirmModal.classList.remove('show');
+        currentForm = null;
+    });
+    
+    // Confirmar compra
+    confirmBtn.addEventListener('click', function() {
+        if (currentForm) {
+            currentForm.submit();
+        }
+        confirmModal.classList.remove('show');
+    });
+    
+    // Cerrar modal al hacer clic fuera del diálogo
+    confirmModal.addEventListener('click', function(e) {
+        if (e.target === confirmModal) {
+            confirmModal.classList.remove('show');
+            currentForm = null;
+        }
+    });
+    
     // Confirmación antes de realizar el sorteo
     const drawForm = document.querySelector('form[action*="draw_raffle"]');
     if (drawForm) {
@@ -519,16 +651,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
-    // Confirmación antes de comprar un ticket
-    const ticketForms = document.querySelectorAll('form[action=""]');
-    ticketForms.forEach(form => {
-        form.addEventListener('submit', function(e) {
-            if (!confirm('¿Confirmas la compra de este ticket?')) {
-                e.preventDefault();
-            }
-        });
-    });
     
     // Efecto hover mejorado para tickets
     const tickets = document.querySelectorAll('.ticket-number');
