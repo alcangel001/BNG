@@ -389,31 +389,35 @@ class Player(models.Model):
         called_numbers_set = set(self.game.called_numbers)
         
         for card in self.cards:
+            # Función auxiliar para verificar si un número está marcado (considera 0 como comodín)
+            def is_marked(num):
+                return num == 0 or num in called_numbers_set
+            
             if self.game.winning_pattern == 'HORIZONTAL':
                 for row in card:
-                    if all(num in called_numbers_set for num in row):
+                    if all(is_marked(num) for num in row):
                         return True
             elif self.game.winning_pattern == 'VERTICAL':
                 for col in range(5):
-                    if all(row[col] in called_numbers_set for row in card):
+                    if all(is_marked(row[col]) for row in card):
                         return True
             elif self.game.winning_pattern == 'DIAGONAL':
-                if all(card[i][i] in called_numbers_set for i in range(5)) or \
-                   all(card[i][4-i] in called_numbers_set for i in range(5)):
+                if all(is_marked(card[i][i]) for i in range(5)) or \
+                all(is_marked(card[i][4-i]) for i in range(5)):
                     return True
             elif self.game.winning_pattern == 'FULL':
-                if all(num in called_numbers_set for row in card for num in row):
+                if all(is_marked(num) for row in card for num in row):
                     return True
             elif self.game.winning_pattern == 'CORNERS':
                 corners = [card[0][0], card[0][4], card[4][0], card[4][4]]
-                if all(corner in called_numbers_set for corner in corners):
+                if all(is_marked(corner) for corner in corners):
                     return True
             elif self.game.winning_pattern == 'CUSTOM' and self.game.custom_pattern:
                 # Verificar patrón personalizado
                 pattern = self.game.custom_pattern
                 for i in range(5):
                     for j in range(5):
-                        if pattern[i][j] == 1 and card[i][j] not in called_numbers_set:
+                        if pattern[i][j] == 1 and not is_marked(card[i][j]):
                             break
                     else:
                         continue

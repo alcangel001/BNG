@@ -138,7 +138,7 @@ def game_room(request, game_id):
         try:
             with transaction.atomic():
                 # Solo cobrar entrada si NO es el organizador
-                if not is_organizer:
+                if is_organizer:
                     # Charge entry fee
                     request.user.credit_balance -= game.entry_price
                     request.user.save()
@@ -148,15 +148,9 @@ def game_room(request, game_id):
                         user=request.user,
                         amount=-game.entry_price,
                         transaction_type='PURCHASE',
-                        description=f"Entrada a partida: {game.name}",
+                        description=f"Comision por crear partida: {game.name}",
                         related_game=game
-                    )
-                    
-                    # Distribute entry fee
-                    distribute_entry_fee(game, game.entry_price, percentage_settings)
-                
-                messages.success(request, f'Te has unido a la partida.' + (f' Se te han descontado {game.entry_price} créditos' if not is_organizer else ''))
-                
+                    )                
         except Exception as e:
             messages.error(request, f'Error al unirse a la partida: {str(e)}')
             return redirect('lobby')
@@ -266,41 +260,6 @@ def game_room(request, game_id):
         'chat_messages': chat_messages,
     })
 
-# Helper functions for game room
-def distribute_entry_fee(game, amount, percentage_settings):
-    """Distribute entry fee according to percentages"""
-    # Primero asegurar que el premio base está cubierto
-    remaining_amount = amount
-    
-    # Luego distribuir los porcentajes del resto
-    admin_share = remaining_amount * (percentage_settings.admin_percentage / 100)
-    organizer_share = remaining_amount * (percentage_settings.organizer_percentage / 100)
-    
-    # Credit admin
-    admin = User.objects.filter(is_admin=True).first()
-    if admin:
-        admin.credit_balance += admin_share
-        admin.save()
-        Transaction.objects.create(
-            user=admin,
-            amount=admin_share,
-            transaction_type='ADMIN_ADD',
-            description=f"Porcentaje admin de entrada a {game.name}",
-            related_game=game
-        )
-    
-    # Credit organizer
-    game.organizer.credit_balance += organizer_share
-    game.organizer.save()
-    Transaction.objects.create(
-        user=game.organizer,
-        amount=organizer_share,
-        transaction_type='ADMIN_ADD',
-        description=f"Porcentaje organizador de entrada a {game.name}",
-        related_game=game
-    )
-
-
 def distribute_purchase(game, amount, percentage_settings):
     """Distribute card purchase according to percentages"""
     admin_share = amount * (percentage_settings.admin_percentage / 100)
@@ -384,18 +343,34 @@ def distribute_remaining_funds(game, percentage_settings):
             related_game=game
         )
 
+
 def generate_bingo_card():
-    """Generate a random bingo card"""
+    """Genera un cartón de Bingo tradicional 5x5 con letras B-I-N-G-O y comodín central"""
+    # Rangos para cada columna según las letras B-I-N-G-O
+    ranges = {
+        'B': (1, 15),
+        'I': (16, 30),
+        'N': (31, 45),
+        'G': (46, 60),
+        'O': (61, 75)
+    }
+    
     card = []
-    numbers = list(range(1, 91))
-    random.shuffle(numbers)
+    for letter in ['B', 'I', 'N', 'G', 'O']:
+        # Generar 5 números únicos para cada columna
+        start, end = ranges[letter]
+        numbers = random.sample(range(start, end+1), 5)
+        
+        # Para la columna N (tercera columna), el tercer número es comodín (0 o vacío)
+        if letter == 'N':
+            numbers[2] = 0  # O usar "" para representar el comodín
+        
+        card.append(numbers)
     
-    for _ in range(5):
-        row = sorted(numbers[:5])
-        numbers = numbers[5:]
-        card.append(row)
+    # Transponer la matriz para tener filas en lugar de columnas
+    card_rows = list(zip(*card))
     
-    return card
+    return list(card_rows)
 
 @login_required
 def profile(request):

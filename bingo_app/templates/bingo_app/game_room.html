@@ -16,6 +16,28 @@
         transition: all 0.3s ease;
     }
 
+    .bingo-letter {
+    background-color: var(--accent-color);
+    color: black;
+    font-weight: bold;
+    text-align: center;
+    padding: 8px;
+    border-radius: 5px;
+}
+
+    .free-cell {
+        background-color: #4CAF50;
+        color: red;
+        font-weight: bold;
+    }
+
+    .bingo-card th, .bingo-card td {
+        width: 20%;
+        height: 50px;
+        text-align: center;
+        vertical-align: middle;
+    }
+
     .bingo-card tr {
         display: flex;
         justify-content: space-between;
@@ -582,16 +604,26 @@
         <h3 class="mb-3">Tus Cartones ({{ player.cards|length }}/{{ game.max_cards_per_player }})</h3>
         <div class="row" id="cards-container">
             {% for card in player.cards %}
+            <!-- Dentro de la sección de cartones -->
             <div class="col-md-6 col-lg-4 mb-4">
                 <div class="bingo-card">
                     <div class="bingo-header">Cartón {{ forloop.counter }}</div>
                     <table class="table table-bordered text-center mb-0">
+                        <!-- Fila de letras B-I-N-G-O -->
+                        <tr>
+                            <th class="bingo-letter">B</th>
+                            <th class="bingo-letter">I</th>
+                            <th class="bingo-letter">N</th>
+                            <th class="bingo-letter">G</th>
+                            <th class="bingo-letter">O</th>
+                        </tr>
                         {% for row in card %}
                         <tr>
                             {% for num in row %}
-                            <td class="bingo-cell {% if num in game.called_numbers %}called{% endif %}" 
+                            <td class="bingo-cell {% if num in game.called_numbers %}called{% endif %} 
+                                {% if num == 0 %}free-cell{% endif %}"
                                 id="cell-{{ forloop.parentloop.parentloop.counter }}-{{ forloop.parentloop.counter }}-{{ forloop.counter }}">
-                                {{ num }}
+                                {% if num == 0 %}KUSU{% else %}{{ num }}{% endif %}
                             </td>
                             {% endfor %}
                         </tr>
@@ -682,7 +714,7 @@
 
         <!-- Números llamados -->
         <div class="called-numbers-container">
-            <h5><i class="fas fa-list-ol me-1"></i>Números llamados ({{ game.called_numbers|length }}/90)</h5>
+            <h5><i class="fas fa-list-ol me-1"></i>Números llamados ({{ game.called_numbers|length }}/75)</h5>
             <div id="called-numbers" class="d-flex flex-wrap">
                 {% for num in game.called_numbers %}
                 <span class="called-number {% if num == game.current_number %}newest{% endif %}">{{ num }}</span>
@@ -860,6 +892,8 @@
     }
     
     function addNewCardToUI(cardData, cardNumber) {
+
+        
         const cardsContainer = document.getElementById('cards-container');
         
         const cardDiv = document.createElement('div');
@@ -872,12 +906,21 @@
             <div class="bingo-card">
                 <div class="bingo-header">Cartón ${cardNumber}</div>
                 <table class="table table-bordered text-center mb-0">
+                    <!-- Fila de letras B-I-N-G-O -->
+                    <tr>
+                        <th class="bingo-letter">B</th>
+                        <th class="bingo-letter">I</th>
+                        <th class="bingo-letter">N</th>
+                        <th class="bingo-letter">G</th>
+                        <th class="bingo-letter">O</th>
+                    </tr>
                     ${cardData.map((row, rowIndex) => `
                         <tr>
                             ${row.map((num, cellIndex) => `
-                                <td class="bingo-cell ${calledNumbers.includes(num) ? 'called' : ''}" 
+                                <td class="bingo-cell ${calledNumbers.includes(num) ? 'called' : ''} 
+                                    ${num === 0 ? 'free-cell' : ''}" 
                                     id="cell-${cardNumber}-${rowIndex}-${cellIndex}">
-                                    ${num}
+                                    ${num === 0 ? 'KUSU' : num}
                                 </td>
                             `).join('')}
                         </tr>
@@ -887,7 +930,7 @@
         `;
         
         cardsContainer.appendChild(cardDiv);
-    }
+}
 
     // ==================== Manejador de WebSocket ====================
     socket.onmessage = function(e) {

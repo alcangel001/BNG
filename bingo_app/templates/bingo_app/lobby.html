@@ -116,10 +116,6 @@
         box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
     }
     
-    .entry-price {
-        background: linear-gradient(135deg, #3498DB 0%, #2980B9 100%);
-    }
-    
     .card-price {
         background: linear-gradient(135deg, #F39C12 0%, #E67E22 100%);
     }
@@ -396,12 +392,6 @@
                             <hr class="divider">
                             
                             <div class="game-feature">
-                                <i class="fas fa-ticket-alt"></i>
-                                <span class="feature-label">Entrada:</span>
-                                <span class="feature-value price-tag entry-price">{{ game.entry_price }} créditos</span>
-                            </div>
-                            
-                            <div class="game-feature">
                                 <i class="fas fa-layer-group"></i>
                                 <span class="feature-label">Cartones extra:</span>
                                 <span class="feature-value price-tag card-price">{{ game.card_price }} créditos</span>
@@ -418,12 +408,9 @@
                                 <i class="fas fa-door-open"></i>Entrar
                             </a>
                             {% else %}
-                            <button class="join-button join-game-btn"
-                                data-game-id="{{ game.id }}"
-                                data-game-name="{{ game.name }}"
-                                data-entry-price="{{ game.entry_price }}">
+                            <a href="{% url 'game_room' game.id %}" class="join-button">
                                 <i class="fas fa-sign-in-alt"></i>Unirse
-                            </button>
+                            </a>
                             {% endif %}
                         </div>
                     </div>
@@ -493,8 +480,8 @@
                         <span>Participación</span>
                     </h5>
                     <ul class="list-unstyled ps-4">
-                        <li class="mb-2"><i class="fas fa-check-circle me-2" style="color: #2ECC71;"></i>Paga la entrada para unirte</li>
-                        <li><i class="fas fa-check-circle me-2" style="color: #2ECC71;"></i>Compra más cartones si lo deseas</li>
+                        <li class="mb-2"><i class="fas fa-check-circle me-2" style="color: #2ECC71;"></i>Únete gratis a cualquier sala</li>
+                        <li><i class="fas fa-check-circle me-2" style="color: #2ECC71;"></i>Compra cartones adicionales si lo deseas</li>
                     </ul>
                 </div>
                 <div>
@@ -517,54 +504,12 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Manejar clic en botón Unirse
+    // Todos los botones de unirse ahora redirigen directamente sin validación de saldo
     document.querySelectorAll('.join-game-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
             const gameId = this.dataset.gameId;
-            const gameName = this.dataset.gameName;
-            const entryPrice = parseFloat(this.dataset.entryPrice);
-            const userBalance = parseFloat("{{ user.credit_balance }}");
-            
-            if (userBalance < entryPrice) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Saldo insuficiente',
-                    html: `<div style="text-align: left; color: #ECF0F1;">
-                        <p>Para unirte a <strong style="color: #F1C40F;">${gameName}</strong> necesitas <strong>${entryPrice} créditos</strong>.</p>
-                        <p>Tu saldo actual: <strong style="color: #E74C3C;">${userBalance} créditos</strong></p>
-                    </div>`,
-                    confirmButtonText: 'Entendido',
-                    background: '#2C3E50',
-                    color: '#ECF0F1',
-                    iconColor: '#E74C3C'
-                });
-                return;
-            }
-            
-            Swal.fire({
-                title: 'Confirmar unión',
-                html: `<div style="text-align: left; color: #ECF0F1;">
-                    <p>¿Unirse a <strong style="color: #F1C40F;">${gameName}</strong> por <strong>${entryPrice} créditos</strong>?</p>
-                    <p style="color: #BDC3C7; font-size: 0.9rem;">NOTA: Si ya te habías unido a esta partida no se te descontarán los créditos</p>
-                </div>`,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: '<i class="fas fa-sign-in-alt me-1"></i> Unirse',
-                cancelButtonText: '<i class="fas fa-times me-1"></i> Cancelar',
-                background: '#2C3E50',
-                color: '#ECF0F1',
-                iconColor: '#3498DB',
-                customClass: {
-                    confirmButton: 'join-button',
-                    cancelButton: 'btn btn-outline-light'
-                },
-                buttonsStyling: false
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.location.href = `{% url 'game_room' 0 %}`.replace('0', gameId);
-                }
-            });
+            window.location.href = `{% url 'game_room' 0 %}`.replace('0', gameId);
         });
     });
 });
