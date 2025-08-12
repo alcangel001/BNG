@@ -1233,6 +1233,8 @@
         
         const result = await response.json();
         
+        window.location.reload();
+        
         if (!result.success) {
             showToast('error', 'Error', result.error || 'No se pudo completar la compra');
             buyCardBtn.disabled = playerCardsCount >= maxCards || isGameStarted || isGameFinished;
