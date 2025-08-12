@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+import urllib.parse
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -23,6 +24,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 
 SECRET_KEY = os.environ.get("SECRET_KEY")
+
+CSRF_TRUSTED_ORIGINS = ['https://*.railway.app']
+
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
@@ -48,15 +54,15 @@ INSTALLED_APPS = [
 
 ASGI_APPLICATION = 'bingo_project.asgi.application'
 
+redis_url = os.environ.get("REDIS_URL")
 CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            "hosts": [('127.0.0.1', 6379)],
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [redis_url],  # 👈 Usa la URL completa (con auth)
         },
     },
 }
-
 
 
 
