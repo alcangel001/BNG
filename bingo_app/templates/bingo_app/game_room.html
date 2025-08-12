@@ -754,7 +754,7 @@
     const buyCardBtn = document.getElementById('buy-card-btn');
     
     // WebSocket
-    const socket = new WebSocket(`ws://${window.location.host}/game/${gameId}/`);
+    const socket = new WebSocket(`wss://${window.location.host}/game/${gameId}/`);
     
     // ==================== Funciones para actualizar premio y progreso ====================
     function updatePrizeDisplay(newPrize, increaseAmount = 0) {
