@@ -209,6 +209,9 @@ class Game(models.Model):
             except Player.DoesNotExist:
                 logger.error(f"No se encontró el jugador ganador para el usuario {winner.username} en el juego {self.name}")
                 return False
+            
+
+            print("PRIMER SALDO PRUEBAS", winner.credit_balance)
                 
             # Distribuir el premio según los porcentajes
             percentage_settings = PercentageSettings.objects.first()
@@ -230,7 +233,10 @@ class Game(models.Model):
                         player_prize = self.current_prize * Decimal(player_percentage)
                         winner.credit_balance += player_prize
                         winner.save()
+                        print("DEPURANDO JUGADOR AUMENTO", player_prize)
+                        print("DEPURANDO JUGADOR SALDO ACTUAL 1",winner.credit_balance)
                         
+
                         Transaction.objects.create(
                             user=winner,
                             amount=player_prize,
@@ -249,6 +255,8 @@ class Game(models.Model):
                         self.organizer.credit_balance += organizer_prize
                         print("BALANCE", self.organizer.credit_balance)
                         self.organizer.save()
+
+                        print("DEPURANDO JUGADOR SALDO ACTUAL 2",winner.credit_balance)
                         
                         Transaction.objects.create(
                             user=self.organizer,
@@ -285,7 +293,7 @@ class Game(models.Model):
                                     related_game=self
                                 )
 
-                        
+                        print("DEPURANDO JUGADOR SALDO ACTUAL 3",winner.credit_balance)
                         
                         return True
                 except Exception as e:
@@ -293,6 +301,131 @@ class Game(models.Model):
                     logger.error(f"Error al distribuir premio: {str(e)}")
                     return False
             return True
+        return False
+    
+    def end_game_manual(self, winner):
+        if not self.is_finished:
+            self.is_finished = True
+            self.winner = winner
+            self.current_prize = self.calculate_current_prize()
+            
+            try:
+                with transaction.atomic():
+                    # Bloquear registros primero
+                    winner = User.objects.select_for_update().get(pk=winner.pk)
+                    organizer = User.objects.select_for_update().get(pk=self.organizer.pk)
+                    admin = User.objects.filter(is_admin=True).select_for_update().first()
+                    
+                    # Calcular todos los premios ANTES de modificar balances
+                    percentage_settings = PercentageSettings.objects.first()
+                    if not percentage_settings or self.current_prize <= 0:
+                        return False
+                    
+                    total_cards_value = self.max_cards_sold * self.card_price
+                    
+                    # Calcular montos
+                    amounts = {
+                        'player': self.current_prize * Decimal(percentage_settings.player_percentage / 100),
+                        'organizer': self.current_prize * Decimal(percentage_settings.organizer_percentage / 100),
+                        'admin': self.current_prize * Decimal(percentage_settings.admin_percentage / 100),
+                        'cards': total_cards_value
+                    }
+                    
+                    # Preparar actualizaciones
+                    updates = {}
+                    
+                    # Siempre dar premio al jugador
+                    updates[winner] = amounts['player']
+                    
+                    # Verificar si es organizador
+                    if winner == organizer:
+                        updates[winner] += amounts['organizer'] + amounts['cards']
+                    else:
+                        updates[organizer] = amounts['organizer'] + amounts['cards']
+                        updates[winner] = amounts['player']
+                    
+                    # Verificar si es admin (y no es el organizador)
+                    if admin and admin != winner and admin != organizer:
+                        updates[admin] = amounts['admin']
+                    
+                    # Aplicar TODAS las actualizaciones en una sola operación por usuario
+                    for user, amount in updates.items():
+                        user.credit_balance += amount
+                        user.save()
+                    
+                    # Guardar estado del juego
+                    self.save()
+                    
+                    # Registrar transacciones
+                    Transaction.objects.create(
+                        user=winner,
+                        amount=amounts['player'],
+                        transaction_type='PRIZE',
+                        description=f"Premio por ganar {self.name}",
+                        related_game=self
+                    )
+                    
+                    if winner == organizer:
+                        Transaction.objects.create(
+                            user=winner,
+                            amount=amounts['organizer'],
+                            transaction_type='ORGANIZER_PRIZE',
+                            description=f"Parte organizador de {self.name}",
+                            related_game=self
+                        )
+                        Transaction.objects.create(
+                            user=winner,
+                            amount=amounts['cards'],
+                            transaction_type='CARDS_REVENUE',
+                            description=f"Ingresos por cartones en {self.name}",
+                            related_game=self
+                        )
+                    else:
+                        Transaction.objects.create(
+                            user=organizer,
+                            amount=amounts['organizer'],
+                            transaction_type='ORGANIZER_PRIZE',
+                            description=f"Parte organizador de {self.name}",
+                            related_game=self
+                        )
+                        Transaction.objects.create(
+                            user=organizer,
+                            amount=amounts['cards'],
+                            transaction_type='CARDS_REVENUE',
+                            description=f"Ingresos por cartones en {self.name}",
+                            related_game=self
+                        )
+                    
+                    if admin and admin != winner and admin != organizer:
+                        Transaction.objects.create(
+                            user=admin,
+                            amount=amounts['admin'],
+                            transaction_type='ADMIN_PRIZE',
+                            description=f"Parte admin de {self.name}",
+                            related_game=self
+                        )
+                    
+                    # Notificación
+                    channel_layer = get_channel_layer()
+                    async_to_sync(channel_layer.group_send)(
+                        f"user_{winner.id}",
+                        {
+                            'type': 'win_notification',
+                            'message': f"¡Ganaste {self.current_prize} créditos en {self.name}",
+                            'details': {
+                                'player_prize': float(amounts['player']),
+                                'organizer_prize': float(amounts['organizer']) if winner == organizer else 0,
+                                'admin_prize': float(amounts['admin']) if admin and admin != winner and admin != organizer else 0,
+                                'cards_revenue': float(amounts['cards']) if winner == organizer else 0
+                            }
+                        }
+                    )
+                    
+                    return True
+                    
+            except Exception as e:
+                logger.error(f"Error en end_game: {str(e)}", exc_info=True)
+                return False
         return False
 
     def start_auto_calling(self):

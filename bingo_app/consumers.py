@@ -137,11 +137,6 @@ class BingoConsumer(AsyncWebsocketConsumer):
         self.game.refresh_from_db()
         prize = float(self.game.current_prize) if self.game.current_prize else 0.0
         
-        if prize > 0:
-            player.user.credit_balance += Decimal(str(prize))
-            player.user.save()
-            
-        
         self.game.end_game(player.user)
         return prize
 

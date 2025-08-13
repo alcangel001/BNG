@@ -12,7 +12,7 @@ urlpatterns = [
     path('game/<int:game_id>/', views.game_room, name='game_room'),
     path('game/<int:game_id>/buy-card/', views.buy_card, name='buy_card'),
     path('start-game/<int:game_id>/', views.start_game, name='start_game'),
-    path('claim-bingo/<int:game_id>/', views.claim_bingo, name='claim_bingo'),
+   # path('claim-bingo/<int:game_id>/', views.claim_bingo, name='claim_bingo'),
     path('toggle-auto-call/<int:game_id>/', views.toggle_auto_call, name='toggle_auto_call'),
     path('api/messages/', views.message_list_api, name='message_list'),
     path('api/messages/send/', views.send_message_api, name='send_message'),
@@ -25,6 +25,8 @@ urlpatterns = [
     path('messaging/', views.messaging, name='messaging'),
     path('organizer-dashboard/', views.organizer_dashboard, name='organizer_dashboard'),
     path('withdraw/', views.request_withdrawal, name='request_withdrawal'),
+    path('game/<int:game_id>/call-number/', views.call_number, name='call_number'),
+
 
 
 

@@ -650,6 +650,9 @@
                 <button id="start-auto-call-btn" class="btn btn-success btn-lg game-control-btn">
                     <i class="fas fa-robot me-2"></i>Iniciar Llamada Automática
                 </button>
+                 <button id="manual-call-btn" class="btn btn-success btn-lg game-control-btn">
+                    <i class="fas fa-robot me-2"></i>Llamar Número
+                </button>
                 {% endif %}
             {% endif %}
         </div>
@@ -830,35 +833,129 @@
     }
     
     function updateGameControls(isStarted, isAutoCalling) {
-        if (!isOrganizer) return;
-        
-        const controlsDiv = document.getElementById('game-controls');
-        
-        if (!isStarted) {
+    if (!isOrganizer) return;
+    
+    const controlsDiv = document.getElementById('game-controls');
+    
+    if (!isStarted) {
+        controlsDiv.innerHTML = `
+            <button id="start-game-btn" class="btn btn-danger btn-lg game-control-btn">
+                <i class="fas fa-play me-2"></i>Iniciar Juego
+            </button>
+        `;
+        document.getElementById('start-game-btn').addEventListener('click', startGame);
+    } else {
+        if (isAutoCalling) {
             controlsDiv.innerHTML = `
-                <button id="start-game-btn" class="btn btn-danger btn-lg game-control-btn">
-                    <i class="fas fa-play me-2"></i>Iniciar Juego
+                <button id="stop-auto-call-btn" class="btn btn-warning btn-lg game-control-btn">
+                    <i class="fas fa-stop me-2"></i>Detener Llamada Automática
                 </button>
             `;
-            document.getElementById('start-game-btn').addEventListener('click', startGame);
+            document.getElementById('stop-auto-call-btn').addEventListener('click', stopAutoCall);
         } else {
-            if (isAutoCalling) {
-                controlsDiv.innerHTML = `
-                    <button id="stop-auto-call-btn" class="btn btn-warning btn-lg game-control-btn">
-                        <i class="fas fa-stop me-2"></i>Detener Llamada Automática
+            controlsDiv.innerHTML = `
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <button id="start-auto-call-btn" class="btn btn-success btn-lg game-control-btn w-100">
+                            <i class="fas fa-robot me-2"></i>Llamada Automática
+                        </button>
+                    </div>
+                    <div class="col-md-6">
+                        <button id="manual-call-btn" class="btn btn-primary btn-lg game-control-btn w-100">
+                            <i class="fas fa-hand-pointer me-2"></i>Llamar Número
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Input para número manual (oculto inicialmente) -->
+                <div class="input-group mt-3" id="manual-call-input" style="display: none;">
+                    <input type="number" id="manual-number-input" class="form-control" 
+                           placeholder="Introduce un número (1-90)" min="1" max="90">
+                    <button id="confirm-manual-call" class="btn btn-success">
+                        <i class="fas fa-check"></i> Confirmar
                     </button>
-                `;
-                document.getElementById('stop-auto-call-btn').addEventListener('click', stopAutoCall);
-            } else {
-                controlsDiv.innerHTML = `
-                    <button id="start-auto-call-btn" class="btn btn-success btn-lg game-control-btn">
-                        <i class="fas fa-robot me-2"></i>Iniciar Llamada Automática
+                    <button id="cancel-manual-call" class="btn btn-danger">
+                        <i class="fas fa-times"></i> Cancelar
                     </button>
-                `;
-                document.getElementById('start-auto-call-btn').addEventListener('click', startAutoCall);
-            }
+                </div>
+            `;
+            
+            // Agregar event listeners para los nuevos botones
+            document.getElementById('start-auto-call-btn').addEventListener('click', startAutoCall);
+            
+            const manualCallBtn = document.getElementById('manual-call-btn');
+            const manualCallInput = document.getElementById('manual-call-input');
+            const confirmManualCall = document.getElementById('confirm-manual-call');
+            const cancelManualCall = document.getElementById('cancel-manual-call');
+            const manualNumberInput = document.getElementById('manual-number-input');
+            
+            manualCallBtn.addEventListener('click', function() {
+                manualCallInput.style.display = 'flex';
+                manualNumberInput.focus();
+            });
+            
+            cancelManualCall.addEventListener('click', function() {
+                manualCallInput.style.display = 'none';
+                manualNumberInput.value = '';
+            });
+            
+            confirmManualCall.addEventListener('click', callNumberManually);
+            manualNumberInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') callNumberManually();
+            });
         }
     }
+}
+
+    // Función para manejar la llamada manual de números
+async function callNumberManually() {
+    const numberInput = document.getElementById('manual-number-input');
+    const number = parseInt(numberInput.value);
+    
+    if (isNaN(number) || number < 1 || number > 90) {
+        showToast('error', 'Error', 'Introduce un número válido entre 1 y 90');
+        return;
+    }
+    
+   /* if (game.called_numbers.includes(number)) {
+        showToast('error', 'Error', 'Este número ya ha sido llamado');
+        return;
+    }*/
+    
+    // Deshabilitar botones durante la llamada
+    const confirmBtn = document.getElementById('confirm-manual-call');
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = '<span class="btn-loader"></span> Llamando...';
+    
+    try {
+        const response = await fetch(`/game/${gameId}/call-number/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                number: number,
+                is_manual: true
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            document.getElementById('manual-call-input').style.display = 'none';
+            numberInput.value = '';
+        } else {
+            showToast('error', 'Error', data.error || 'Error al llamar número');
+        }
+    } catch (error) {
+        showToast('error', 'Error', 'Error en la conexión');
+    } finally {
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '<i class="fas fa-check"></i> Confirmar';
+    }
+}
+
     
     function updateCalledNumbers(calledNumbers, currentNumber = null) {
         const calledNumbersContainer = document.getElementById('called-numbers');
@@ -935,6 +1032,8 @@
     // ==================== Manejador de WebSocket ====================
     socket.onmessage = function(e) {
         const data = JSON.parse(e.data);
+        //game = data; // Actualiza la variable global del juego
+
         
         switch(data.type) {
             case 'game_status':
@@ -956,6 +1055,11 @@
             case 'number_called':
                 handleNewNumber(data);
                 break;
+
+           /* case 'number_called':
+                currentNumberEl.textContent = data.number;
+                updateCalledNumbers(data.called_numbers, data.number);
+                break;*/
                 
             case 'game_started':
                 handleGameStarted(data);

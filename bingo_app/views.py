@@ -228,23 +228,23 @@ def game_room(request, game_id):
                     )
                     
                     # Award prize
-                    if game.current_prize > 0:
-                        request.user.credit_balance += game.current_prize
-                        request.user.save()
+                    # if game.current_prize > 0:
+                    #     request.user.credit_balance += game.current_prize
+                    #     request.user.save()
                         
-                        Transaction.objects.create(
-                            user=request.user,
-                            amount=game.current_prize,
-                            transaction_type='PRIZE',
-                            description=f"Premio por ganar {game.name}",
-                            related_game=game
-                        )
+                    #     Transaction.objects.create(
+                    #         user=request.user,
+                    #         amount=game.current_prize,
+                    #         transaction_type='PRIZE',
+                    #         description=f"Premio por ganar {game.name}",
+                    #         related_game=game
+                    #     )
                         
-                        print("PASE POR AQUI EN CLAIM 2")
-                        messages.success(request, f'¡BINGO! Has ganado {game.current_prize} créditos')
+                    #     print("PASE POR AQUI EN CLAIM 2")
+                    #     messages.success(request, f'¡BINGO! Has ganado {game.current_prize} créditos')
                     
-                    # Distribute remaining funds
-                    distribute_remaining_funds(game, percentage_settings)
+                    # # Distribute remaining funds
+                    # distribute_remaining_funds(game, percentage_settings)
 
                     
             except Exception as e:
@@ -559,68 +559,68 @@ def start_game(request, game_id):
                 'error': 'No se pudo iniciar el juego'
             })
 
-@login_required
-@require_http_methods(["POST"])
-def claim_bingo(request, game_id):
-    game = get_object_or_404(Game, id=game_id)
-    player = get_object_or_404(Player, user=request.user, game=game)
+# @login_required
+# @require_http_methods(["POST"])
+# def claim_bingo(request, game_id):
+#     game = get_object_or_404(Game, id=game_id)
+#     player = get_object_or_404(Player, user=request.user, game=game)
     
-    if not game.is_started:
-        return JsonResponse({
-            'success': False, 
-            'error': 'El juego no ha comenzado'
-        })
+#     if not game.is_started:
+#         return JsonResponse({
+#             'success': False, 
+#             'error': 'El juego no ha comenzado'
+#         })
     
-    if game.is_finished:
-        return JsonResponse({
-            'success': False, 
-            'error': 'El juego ya ha terminado'
-        })
+#     if game.is_finished:
+#         return JsonResponse({
+#             'success': False, 
+#             'error': 'El juego ya ha terminado'
+#         })
     
-    if player.check_bingo():
-        try:
-            with transaction.atomic():
-                player.is_winner = True
-                player.save()
+#     if player.check_bingo():
+#         try:
+#             with transaction.atomic():
+#                 player.is_winner = True
+#                 player.save()
 
-                add_flash_message(request, f"¡GANASTE EL BINGO! Premio: {game.current_prize} créditos")
+#                 add_flash_message(request, f"¡GANASTE EL BINGO! Premio: {game.current_prize} créditos")
 
 
-                # Notificar al ganador
-                channel_layer = get_channel_layer()
-                async_to_sync(channel_layer.group_send)(
-                    f"user_{request.user.id}",
-                    {
-                        'type': 'win_notification',
-                        'message': f"¡BINGO! Ganaste {game.current_prize} créditos",
-                        'prize': float(game.current_prize)  # Corrige este typo a 'prize'
-                    }
-                )
+#                 # Notificar al ganador
+#                 channel_layer = get_channel_layer()
+#                 async_to_sync(channel_layer.group_send)(
+#                     f"user_{request.user.id}",
+#                     {
+#                         'type': 'win_notification',
+#                         'message': f"¡BINGO! Ganaste {game.current_prize} créditos",
+#                         'prize': float(game.current_prize)  # Corrige este typo a 'prize'
+#                     }
+#                 )
                     
-                # Usar el método end_game para distribuir el premio
-                if game.end_game(request.user):
-                    return JsonResponse({
-                        'success': True,
-                        'message': f'¡BINGO! Has ganado {game.current_prize} créditos',
-                        'prize': float(game.current_prize),
-                        'winner': request.user.username
-                    })
-                else:
-                    return JsonResponse({
-                        'success': False,
-                        'error': 'Error al distribuir el premio'
-                    }, status=500)
+#                 # Usar el método end_game para distribuir el premio
+#                 if game.end_game(request.user):
+#                     return JsonResponse({
+#                         'success': True,
+#                         'message': f'¡BINGO! Has ganado {game.current_prize} créditos',
+#                         'prize': float(game.current_prize),
+#                         'winner': request.user.username
+#                     })
+#                 else:
+#                     return JsonResponse({
+#                         'success': False,
+#                         'error': 'Error al distribuir el premio'
+#                     }, status=500)
                 
-        except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'error': f'Error al procesar el premio: {str(e)}'
-            }, status=500)
-    else:
-        return JsonResponse({
-            'success': False, 
-            'error': 'No has completado el patrón ganador'
-        })
+#         except Exception as e:
+#             return JsonResponse({
+#                 'success': False,
+#                 'error': f'Error al procesar el premio: {str(e)}'
+#             }, status=500)
+#     else:
+#         return JsonResponse({
+#             'success': False, 
+#             'error': 'No has completado el patrón ganador'
+#         })
     
 @login_required
 @require_http_methods(["POST"])
@@ -1300,3 +1300,87 @@ def process_withdrawal(request, request_id):
     return render(request, 'bingo_app/admin/process_withdrawal.html', {
         'withdrawal': withdrawal
     })
+
+@login_required
+@require_http_methods(["POST"])
+def call_number(request, game_id):
+    game = get_object_or_404(Game, id=game_id)
+    
+    if request.user != game.organizer:
+        return JsonResponse({'success': False, 'error': 'Solo el organizador puede llamar números'}, status=403)
+    
+    try:
+        data = json.loads(request.body)
+        number = int(data['number'])
+        
+        if number < 1 or number > 90:
+            return JsonResponse({'success': False, 'error': 'Número fuera de rango'}, status=400)
+            
+        if number in game.called_numbers:
+            return JsonResponse({'success': False, 'error': 'Número ya llamado'}, status=400)
+            
+        game.current_number = number
+        game.called_numbers.append(number)
+        game.save()
+        
+        # Verificar si algún jugador ha ganado
+        winner = None
+        for player in game.player_set.all():
+            if player.check_bingo():
+                winner = player.user
+                break
+        
+        # Notificar via WebSocket
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f'game_{game.id}',
+            {
+                'type': 'number_called',
+                'number': number,
+                'called_numbers': game.called_numbers,
+                'is_manual': True,
+                'has_winner': winner is not None,
+                'winner': winner.username if winner else None
+            }
+        )
+        
+        # Si hay ganador, finalizar el juego (esto activará la distribución de premios)
+        if winner:
+            print(f"Ganador detectado: {winner.username}")
+            try:
+                with transaction.atomic():
+                    success = game.end_game_manual(winner)
+                    if not success:
+                        print("Error en end_game")
+                        return JsonResponse({
+                            'success': False, 
+                            'error': 'Error al distribuir premios',
+                            'has_winner': True
+                        }, status=500)
+                    
+                    # Verificar distribución
+                    winner.refresh_from_db()
+                    print(f"Nuevo balance del ganador: {winner.credit_balance}")
+                    
+                    return JsonResponse({
+                        'success': True,
+                        'has_winner': True,
+                        'winner': winner.username,
+                        'new_balance': float(winner.credit_balance)
+                    })
+            except Exception as e:
+                print(f"Error en transacción: {str(e)}")
+                return JsonResponse({
+                    'success': False,
+                    'error': str(e),
+                    'has_winner': True
+                }, status=500)
+        
+        return JsonResponse({
+            'success': True, 
+            'has_winner': False
+        })
+        
+    except Exception as e:
+        print(f"Error general: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
