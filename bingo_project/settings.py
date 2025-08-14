@@ -151,7 +151,7 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),  # carpeta donde están tus archivos estáticos durante desarrollo
+  #  os.path.join(BASE_DIR, 'static'),  # carpeta donde están tus archivos estáticos durante desarrollo
     os.path.join(BASE_DIR, "credit_proofs"),
 ]
 
