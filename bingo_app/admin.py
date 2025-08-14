@@ -5,7 +5,7 @@ from .models import User, Game, Player, ChatMessage
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User, Game,Message, Player, ChatMessage, PercentageSettings, Raffle, FlashMessage
+from .models import User, Game,Message, Player, ChatMessage, PercentageSettings, Raffle, FlashMessage, CreditRequest
 
 # Personalización del UserAdmin
 class CustomUserAdmin(UserAdmin):
@@ -32,3 +32,4 @@ admin.site.register(PercentageSettings)
 admin.site.register(Raffle)
 admin.site.register(FlashMessage)
 admin.site.register(Message)
+admin.site.register(CreditRequest)
