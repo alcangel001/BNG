@@ -1331,7 +1331,7 @@ def call_number(request, game_id):
         data = json.loads(request.body)
         number = int(data['number'])
         
-        if number < 1 or number > 90:
+        if number < 1 or number > 76:
             return JsonResponse({'success': False, 'error': 'Número fuera de rango'}, status=400)
             
         if number in game.called_numbers:

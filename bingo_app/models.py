@@ -152,7 +152,7 @@ class Game(models.Model):
     #     return max(0, self.next_rize_target - self.total_cards_sold)
     
     def call_number(self):
-        available_numbers = [n for n in range(1, 91) if n not in self.called_numbers]
+        available_numbers = [n for n in range(1, 76) if n not in self.called_numbers]
         if available_numbers:
             number = random.choice(available_numbers)
             self.current_number = number
