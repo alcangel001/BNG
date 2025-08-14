@@ -19,10 +19,10 @@ from channels.layers import get_channel_layer  # Para enviar mensajes via WebSoc
 from .flash_messages import add_flash_message
 
 
-from .forms import PercentageSettingsForm, RegistrationForm, GameForm, BuyTicketForm, RaffleForm, CreditRequestForm, WithdrawalRequestForm
+from .forms import PercentageSettingsForm, RegistrationForm, GameForm, BuyTicketForm, RaffleForm, CreditRequestForm, WithdrawalRequestForm,PaymentMethodForm
 from .models import (
     User, Game, Player, ChatMessage, Raffle, Ticket, 
-    Transaction, Message, CreditRequest, PercentageSettings, WithdrawalRequest
+    Transaction, Message, CreditRequest, PercentageSettings, WithdrawalRequest,BankAccount
 )
 
 def register(request):
@@ -386,17 +386,24 @@ def profile(request):
 
 @login_required
 def request_credits(request):
+    # Obtener SOLO métodos activos ordenados
+    payment_methods = BankAccount.objects.filter(is_active=True).order_by('-order', 'title')
+    
     if request.method == 'POST':
         form = CreditRequestForm(request.POST, request.FILES)
         if form.is_valid():
             credit_request = form.save(commit=False)
             credit_request.user = request.user
             credit_request.save()
-            messages.success(request, 'Solicitud de créditos enviada')
+            messages.success(request, '¡Solicitud enviada con éxito!')
             return redirect('profile')
     else:
         form = CreditRequestForm()
-    return render(request, 'bingo_app/credit_request.html', {'form': form})
+    
+    return render(request, 'bingo_app/credit_request.html', {
+        'form': form,
+        'payment_methods': payment_methods  # Asegúrate que este nombre coincida con la plantilla
+    })
 
 @staff_member_required
 def credit_requests_list(request):
@@ -1384,3 +1391,61 @@ def call_number(request, game_id):
     except Exception as e:
         print(f"Error general: {str(e)}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    
+
+@staff_member_required
+def payment_methods_list(request):
+    methods = BankAccount.objects.all().order_by('-order', 'title')
+    return render(request, 'bingo_app/admin/payment_methods/list.html', {
+        'payment_methods': methods
+    })
+
+@staff_member_required
+def create_payment_method(request):
+    if request.method == 'POST':
+        form = PaymentMethodForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Método de pago creado exitosamente')
+            return redirect('payment_methods_list')
+    else:
+        form = PaymentMethodForm()
+    
+    return render(request, 'bingo_app/admin/payment_methods/create.html', {
+        'form': form,
+        'title': 'Crear nuevo método de pago'
+    })
+
+@staff_member_required
+def edit_payment_method(request, method_id):
+    method = get_object_or_404(BankAccount, id=method_id)
+    
+    if request.method == 'POST':
+        form = PaymentMethodForm(request.POST, instance=method)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Método de pago actualizado')
+            return redirect('payment_methods_list')
+    else:
+        form = PaymentMethodForm(instance=method)
+    
+    return render(request, 'bingo_app/admin/payment_methods/create.html', {
+        'form': form,
+        'title': f'Editar {method.title}'
+    })
+
+@staff_member_required
+def delete_payment_method(request, method_id):
+    method = get_object_or_404(BankAccount, id=method_id)
+    if request.method == 'POST':
+        method.delete()
+        messages.success(request, 'Método de pago eliminado')
+    return redirect('payment_methods_list')
+
+@staff_member_required
+def toggle_payment_method(request, method_id):
+    method = get_object_or_404(BankAccount, id=method_id)
+    method.is_active = not method.is_active
+    method.save()
+    messages.success(request, f'Método {"activado" if method.is_active else "desactivado"}')
+    return redirect('payment_methods_list')

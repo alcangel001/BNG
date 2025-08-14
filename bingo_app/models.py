@@ -717,8 +717,6 @@ class FlashMessage(models.Model):
     def __str__(self):
         return f"{self.user.username}: {self.message[:50]}..."
     
-
-
 class WithdrawalRequest(models.Model):
     STATUS_CHOICES = [
         ('PENDING', 'Pendiente'),
@@ -749,3 +747,43 @@ class WithdrawalRequest(models.Model):
     def save(self, *args, **kwargs):
         # Si el estado cambia, actualizar la fecha de procesamiento
         super().save(*args, **kwargs)
+
+
+class BankAccount(models.Model):
+    """
+    Modelo completamente personalizable para cuentas bancarias/métodos de pago
+    """
+    title = models.CharField(
+        max_length=100, 
+        verbose_name="Título/Nombre",
+        help_text="Ej: Banco de Venezuela, Zelle, PayPal, Binance, etc."
+    )
+    details = models.TextField(
+        verbose_name="Detalles completos",
+        help_text="Información completa que verán los usuarios. Ej: Número de cuenta, titular, cédula, teléfono, email, etc."
+    )
+    instructions = models.TextField(
+        blank=True,
+        verbose_name="Instrucciones especiales",
+        help_text="Instrucciones específicas para este método (opcional)"
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name="Activo",
+        help_text="Mostrar este método a los usuarios"
+    )
+    order = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Orden",
+        help_text="Orden de visualización (mayor número = más arriba)"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Método de Pago'
+        verbose_name_plural = 'Métodos de Pago'
+        ordering = ['-order', 'title']
+
+    def __str__(self):
+        return f"{self.title} ({'Activo' if self.is_active else 'Inactivo'})"

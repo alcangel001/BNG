@@ -1,0 +1,81 @@
+{% extends "bingo_app/base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">{{ title }}</h4>
+        </div>
+        <div class="card-body text-dark">  <!-- Añadido text-dark aquí -->
+            <form method="post">
+                {% csrf_token %}
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-dark">Nombre del método</label>  <!-- Añadido text-dark -->
+                        {{ form.title }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label text-dark">Orden</label>  <!-- Añadido text-dark -->
+                        {{ form.order }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label text-dark">Estado</label>  <!-- Añadido text-dark -->
+                        <div class="form-check form-switch mt-2">
+                            {{ form.is_active }}
+                            <label class="form-check-label text-dark" for="{{ form.is_active.id_for_label }}">Activo</label>  <!-- Añadido text-dark -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label text-dark">Detalles de pago</label>  <!-- Añadido text-dark -->
+                    {{ form.details }}
+                    <small class="form-text text-dark">Información que verán los usuarios (número de cuenta, titular, etc.)</small>  <!-- Cambiado text-muted a text-dark -->
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label text-dark">Instrucciones especiales</label>  <!-- Añadido text-dark -->
+                    {{ form.instructions }}
+                    <small class="form-text text-dark">Opcional - Instrucciones específicas para este método</small>  <!-- Cambiado text-muted a text-dark -->
+                </div>
+                
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'payment_methods_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save me-2"></i>Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Asegurar que todo el texto en los inputs y selects sea negro */
+    .form-control, 
+    .form-select,
+    textarea,
+    input {
+        color: #000 !important;
+    }
+    
+    /* Mantener el texto de ayuda en gris pero un poco más oscuro */
+    .form-text {
+        color: #6c757d !important;  /* Un gris más oscuro que text-muted */
+    }
+    
+    /* Asegurar que las etiquetas del formulario sean negras */
+    .form-label,
+    .form-check-label {
+        color: #000 !important;
+    }
+    
+    /* Mantener el color blanco en el header */
+    .card-header,
+    .card-header h4 {
+        color: #fff !important;
+    }
+</style>
+{% endblock %}

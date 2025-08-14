@@ -1,25 +1,163 @@
 {% extends "bingo_app/base.html" %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="card">
-        <div class="card-header">
-            <h4>Solicitar Créditos</h4>
+<div class="container py-4">
+    <div class="row">
+        <!-- Formulario de Solicitud -->
+        <div class="col-lg-8 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-coins me-2"></i>Solicitar Recarga de Créditos
+                    </h4>
+                </div>
+                <div class="card-body text-dark">  <!-- Añadido text-dark aquí -->
+                    <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Monto -->
+                        <div class="mb-3">
+                            <label for="id_amount" class="form-label text-dark">Monto a Recargar (USD)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" name="amount" class="form-control text-dark" id="id_amount" 
+                                       min="1" step="0.01" required>
+                            </div>
+                            <small class="form-text text-muted">Mínimo $1.00 USD</small>
+                            <div class="invalid-feedback text-dark">
+                                Por favor ingresa un monto válido.
+                            </div>
+                        </div>
+                        
+                        <!-- Método de Pago -->
+                        <div class="mb-3">
+                            <label class="form-label text-dark">Selecciona tu Método de Pago</label>
+                            <select class="form-select text-dark" name="payment_method" required>
+                                <option value="" selected disabled>-- Elige cómo pagaste --</option>
+                                {% for method in payment_methods %}
+                                <option value="{{ method.id }}" class="text-dark">{{ method.title }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="invalid-feedback text-dark">
+                                Por favor selecciona un método de pago.
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label text-dark">Comprobante de Pago</label>
+                            <input type="file" name="proof" class="form-control text-dark" accept="image/*,.pdf" required>
+                            <small class="form-text text-muted">
+                                Sube una imagen (JPG/PNG) o PDF del comprobante
+                            </small>
+                            <div class="invalid-feedback text-dark">
+                                Por favor adjunta tu comprobante de pago.
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-success w-100 py-2">
+                            <i class="fas fa-paper-plane me-2"></i>Enviar Solicitud
+                        </button>
+                    </form>
+                </div>
+            </div>
         </div>
-        <div class="card-body">
-            <form method="post" enctype="multipart/form-data">
-                {% csrf_token %}
-                <div class="mb-3">
-                    <label class="form-label">Cantidad</label>
-                    {{ form.amount }}
+        
+        <!-- Métodos de Pago Disponibles -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm sticky-top" style="top: 20px;">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-university me-2"></i>Métodos de Pago
+                    </h5>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Comprobante de pago</label>
-                    {{ form.proof }}
+                <div class="card-body text-dark">  <!-- Añadido text-dark aquí -->
+                    <div class="alert alert-info small mb-3 text-dark">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Realiza tu pago por cualquiera de estos métodos y luego completa el formulario.
+                    </div>
+                    
+                    {% for method in payment_methods %}
+                    <div class="payment-method mb-3 p-3 border rounded bg-light text-dark">  <!-- Añadido text-dark aquí -->
+                        <h5 class="text-dark mb-2">  <!-- Cambiado text-primary a text-dark -->
+                            <i class="fas fa-wallet me-2"></i>{{ method.title }}
+                        </h5>
+                        <div class="payment-details small text-dark">  <!-- Añadido text-dark aquí -->
+                            {{ method.details|linebreaks }}
+                        </div>
+                        {% if method.instructions %}
+                        <div class="alert alert-warning mt-2 p-2 small text-dark">  <!-- Añadido text-dark aquí -->
+                            <strong><i class="fas fa-exclamation-circle me-1"></i>Importante:</strong>
+                            {{ method.instructions }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% empty %}
+                    <div class="alert alert-warning text-dark">  <!-- Añadido text-dark aquí -->
+                        No hay métodos de pago disponibles actualmente.
+                    </div>
+                    {% endfor %}
                 </div>
-                <button type="submit" class="btn btn-primary">Enviar Solicitud</button>
-            </form>
+            </div>
         </div>
     </div>
 </div>
+
+<style>
+    .payment-method {
+        transition: all 0.2s ease;
+        border-left: 4px solid #0d6efd;
+    }
+    .payment-method:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0.25rem 0.5rem rgba(0,0,0,0.1);
+        border-left-color: #fd7e14;
+    }
+    .payment-details {
+        white-space: pre-line;
+    }
+    .was-validated .form-control:invalid, 
+    .was-validated .form-select:invalid {
+        border-color: #dc3545;
+    }
+    .was-validated .form-control:valid, 
+    .was-validated .form-select:valid {
+        border-color: #198754;
+    }
+    /* Asegurar que todo el texto sea negro */
+    .card-body, 
+    .form-label, 
+    .form-control, 
+    .form-select, 
+    .payment-details, 
+    .payment-method h5,
+    .alert {
+        color: #000 !important;
+    }
+    /* Excepciones para los headers que deben mantener su color */
+    .card-header, 
+    .card-header h4, 
+    .card-header h5 {
+        color: #fff !important;
+    }
+</style>
+
+<script>
+    // Validación del formulario
+    (function() {
+        'use strict'
+        
+        const forms = document.querySelectorAll('.needs-validation')
+        
+        Array.from(forms).forEach(form => {
+            form.addEventListener('submit', event => {
+                if (!form.checkValidity()) {
+                    event.preventDefault()
+                    event.stopPropagation()
+                }
+                
+                form.classList.add('was-validated')
+            }, false)
+        })
+    })()
+</script>
 {% endblock %}

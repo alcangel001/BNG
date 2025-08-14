@@ -28,6 +28,13 @@ urlpatterns = [
     path('game/<int:game_id>/call-number/', views.call_number, name='call_number'),
 
 
+     path('payment-methods/', include([
+        path('', views.payment_methods_list, name='payment_methods_list'),
+        path('create/', views.create_payment_method, name='create_payment_method'),
+        path('<int:method_id>/edit/', views.edit_payment_method, name='edit_payment_method'),
+        path('<int:method_id>/delete/', views.delete_payment_method, name='delete_payment_method'),
+        path('<int:method_id>/toggle/', views.toggle_payment_method, name='toggle_payment_method'),
+    ])),
 
 
     path('credit/', include([

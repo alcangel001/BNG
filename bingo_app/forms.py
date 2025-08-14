@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.core.validators import MinValueValidator
 import json
-from .models import User, Game, CreditRequest, Raffle, PercentageSettings, WithdrawalRequest
+from .models import BankAccount, User, Game, CreditRequest, Raffle, PercentageSettings, WithdrawalRequest
 
 class RegistrationForm(UserCreationForm):
     is_organizer = forms.BooleanField(
@@ -208,3 +208,21 @@ class WithdrawalRequestForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         for field in self.fields:
             self.fields[field].widget.attrs.update({'class': 'form-control'})
+
+
+class PaymentMethodForm(forms.ModelForm):
+    class Meta:
+        model = BankAccount
+        fields = ['title', 'details', 'instructions', 'order', 'is_active']
+        widgets = {
+            'details': forms.Textarea(attrs={'rows': 4}),
+            'instructions': forms.Textarea(attrs={'rows': 2}),
+            'order': forms.NumberInput(attrs={'min': 0}),
+        }
+        labels = {
+            'title': 'Nombre del método',
+            'details': 'Detalles de pago',
+            'instructions': 'Instrucciones especiales',
+            'order': 'Orden de visualización',
+            'is_active': 'Activo',
+        }
