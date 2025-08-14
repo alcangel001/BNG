@@ -152,6 +152,7 @@ STATIC_URL = 'static/'
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),  # carpeta donde están tus archivos estáticos durante desarrollo
+    os.path.join(BASE_DIR, "credit_proofs"),
 ]
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # carpeta donde Django los recolectará para producción
