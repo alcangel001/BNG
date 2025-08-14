@@ -145,13 +145,18 @@ USE_I18N = True
 USE_TZ = True
 
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'credit_proofs')  # o cualquier carpeta donde guardes los uploads
+
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
 
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),  # carpeta donde están tus archivos estáticos durante desarrollo
+  #  os.path.join(BASE_DIR, 'static'),  # carpeta donde están tus archivos estáticos durante desarrollo
+    os.path.join(BASE_DIR, "credit_proofs"),
 ]
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # carpeta donde Django los recolectará para producción
