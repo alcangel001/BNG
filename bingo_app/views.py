@@ -1081,6 +1081,17 @@ def draw_raffle(request, raffle_id):
         messages.error(request, "No hay tickets vendidos")
         return redirect('raffle_detail', raffle_id=raffle.id)
     
+     # Verificar si hay un número ganador manual definido
+    if raffle.is_manual_winner and raffle.manual_winning_number:
+        try:
+            winning_ticket = raffle.tickets.get(number=raffle.manual_winning_number)
+        except Ticket.DoesNotExist:
+            messages.error(request, f"El número ganador manual #{raffle.manual_winning_number} no fue vendido")
+            return redirect('raffle_detail', raffle_id=raffle.id)
+    else:
+        # Selección aleatoria normal
+        winning_ticket = random.choice(raffle.tickets.all())
+    
     try:
         with transaction.atomic():
             # 1. Seleccionar ganador con select_for_update para bloquear el registro

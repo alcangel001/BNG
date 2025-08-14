@@ -448,6 +448,16 @@
                             <span><i class="fas fa-calendar-alt me-2"></i>Fecha del sorteo</span>
                             <strong>{{ raffle.draw_date|date:"d M Y H:i" }}</strong>
                         </div>
+                        <div class="info-item">
+                            <span><i class="fas fa-ticket-alt me-2"></i>Tipo de sorteo</span>
+                            <strong>
+                                {% if raffle.is_manual_winner %}
+                                    Manual 
+                                {% else %}
+                                    Aleatorio
+                                {% endif %}
+                            </strong>
+                        </div>
                     </div>
                 </div>
             </div>

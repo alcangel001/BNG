@@ -637,6 +637,16 @@ class Raffle(models.Model):
     winner = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     winning_number = models.PositiveIntegerField(null=True, blank=True)
 
+    is_manual_winner = models.BooleanField(
+        default=False,
+        verbose_name="Selección manual de ganador"
+    )
+    manual_winning_number = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name="Número ganador manual"
+    )
+
     def __str__(self):
         return self.title
     
@@ -673,7 +683,17 @@ class Raffle(models.Model):
         if not self.can_be_drawn():
             return None
         
-        winning_ticket = random.choice(self.tickets.all())
+        # Si hay un número ganador manual definido, usarlo
+        if self.is_manual_winner and self.manual_winning_number:
+            try:
+                winning_ticket = self.tickets.get(number=self.manual_winning_number)
+            except Ticket.DoesNotExist:
+                return None
+        else:
+            # Sorteo aleatorio normal
+            winning_ticket = random.choice(self.tickets.all())
+        
+        
         self.winning_number = winning_ticket.number
         self.winner = winning_ticket.owner
         self.status = 'FINISHED'

@@ -133,6 +133,18 @@
         animation: pulse 1.5s infinite;
     }
     
+    /* Estilos para el switch */
+    .form-switch .form-check-input {
+        width: 3em;
+        height: 1.5em;
+        margin-left: 0;
+    }
+    
+    .form-switch .form-check-input:checked {
+        background-color: #28a745;
+        border-color: #28a745;
+    }
+    
     /* Responsive */
     @media (max-width: 768px) {
         .card-header, .card-footer {
@@ -207,6 +219,25 @@
                                 <div class="form-text">Total de tickets: <span id="total-tickets">1</span></div>
                             </div>
                         </div>
+                        
+                        <!-- Nueva sección para selección manual del ganador -->
+                        <div class="row mb-3">
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check form-switch">
+                                    {{ form.is_manual_winner }}
+                                    <label class="form-check-label" for="{{ form.is_manual_winner.id_for_label }}">
+                                        Seleccionar ganador manualmente
+                                    </label>
+                                </div>
+                                <div class="form-text">Marcar si deseas elegir manualmente el número ganador</div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3" id="manualWinnerField" style="display: none;">
+                                <label for="{{ form.manual_winning_number.id_for_label }}" class="form-label">Número ganador</label>
+                                {{ form.manual_winning_number }}
+                                <div class="form-text">Ingresa el número que será el ganador</div>
+                            </div>
+                        </div>
                     </div>
                     
                     <div class="card-footer">
@@ -242,6 +273,17 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize
     calculateTotal();
+    
+    // Toggle manual winner field
+    const manualWinnerCheckbox = document.getElementById('{{ form.is_manual_winner.id_for_label }}');
+    const manualWinnerField = document.getElementById('manualWinnerField');
+    
+    function toggleManualWinnerField() {
+        manualWinnerField.style.display = manualWinnerCheckbox.checked ? 'block' : 'none';
+    }
+    
+    manualWinnerCheckbox.addEventListener('change', toggleManualWinnerField);
+    toggleManualWinnerField(); // Initialize
 });
 </script>
 {% endblock %}
