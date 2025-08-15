@@ -169,6 +169,10 @@ class BingoConsumer(AsyncWebsocketConsumer):
                     continue
 
                 called_numbers = await self.get_current_numbers()
+                
+
+                await self.notify_number_called(number, called_numbers)
+
                 winner = await self.check_all_players_for_bingo()
 
                 if winner:
@@ -176,7 +180,7 @@ class BingoConsumer(AsyncWebsocketConsumer):
                     await self.notify_game_ended(winner.user.username, prize, called_numbers)
                     break
 
-                await self.notify_number_called(number, called_numbers)
+                
                 await asyncio.sleep(self.game.auto_call_interval)
                 
             except asyncio.CancelledError:
