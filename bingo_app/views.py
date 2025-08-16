@@ -456,7 +456,7 @@ def process_request(request, request_id):
             credit_request.status = 'rejected'
             messages.success(request, 'Solicitud rechazada')
         credit_request.admin_notes = request.POST.get('notes', '')
-        credit_request.processed_at = datetime.now()
+        credit_request.processed_at = timezone.now()
         credit_request.save()
         return redirect('credit_requests_list')
     return render(request, 'bingo_app/admin/process_request.html', {'request': credit_request})
