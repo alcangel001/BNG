@@ -22,7 +22,7 @@ from .flash_messages import add_flash_message
 from .forms import PercentageSettingsForm, RegistrationForm, GameForm, BuyTicketForm, RaffleForm, CreditRequestForm, WithdrawalRequestForm,PaymentMethodForm
 from .models import (
     User, Game, Player, ChatMessage, Raffle, Ticket, 
-    Transaction, Message, CreditRequest, PercentageSettings, WithdrawalRequest,BankAccount
+    Transaction, Message, CreditRequest, PercentageSettings, WithdrawalRequest,BankAccount, CreditRequestNotification
 )
 
 def register(request):
@@ -44,6 +44,11 @@ def register(request):
 
 @login_required
 def lobby(request):
+
+    unread_count = 0
+    if request.user.is_authenticated:
+        unread_count = request.user.credit_notifications.filter(is_read=False).count()
+    
     active_games = Game.objects.filter(is_active=True, is_finished=False)
     active_raffles = Raffle.objects.filter(status__in=['WAITING', 'IN_PROGRESS'])
     
@@ -56,6 +61,7 @@ def lobby(request):
         'games': active_games,
         'raffles': active_raffles,
         'wins_count': wins_count,
+        'unread_notifications_count': unread_count
     }
     
     return render(request, 'bingo_app/lobby.html', context)
@@ -395,6 +401,15 @@ def request_credits(request):
             credit_request = form.save(commit=False)
             credit_request.user = request.user
             credit_request.save()
+
+            # Crear notificación para admins
+            admins = User.objects.filter(is_admin=True)
+            for admin in admins:
+                CreditRequestNotification.objects.create(
+                    user=admin,
+                    credit_request=credit_request
+                )
+            
             messages.success(request, '¡Solicitud enviada con éxito!')
             return redirect('profile')
     else:
@@ -413,6 +428,12 @@ def credit_requests_list(request):
 @staff_member_required
 def process_request(request, request_id):
     credit_request = get_object_or_404(CreditRequest, id=request_id)
+
+     # Marcar todas las notificaciones relacionadas como leídas
+    CreditRequestNotification.objects.filter(
+        credit_request=credit_request
+    ).update(is_read=True)
+
     if request.method == 'POST':
         action = request.POST.get('action')
         if action == 'approve':
@@ -898,10 +919,15 @@ def create_raffle(request):
 def raffle_lobby(request):
     active_raffles = Raffle.objects.filter(status__in=['WAITING', 'IN_PROGRESS'])
     finished_raffles = Raffle.objects.filter(status='FINISHED')[:5]
+
+    unread_count = 0
+    if request.user.is_authenticated:
+        unread_count = request.user.credit_notifications.filter(is_read=False).count()
     
     return render(request, 'bingo_app/raffle_lobby.html', {
         'active_raffles': active_raffles,
         'finished_raffles': finished_raffles,
+        
     })
 
 @login_required
@@ -1460,3 +1486,41 @@ def toggle_payment_method(request, method_id):
     method.save()
     messages.success(request, f'Método {"activado" if method.is_active else "desactivado"}')
     return redirect('payment_methods_list')
+
+
+# views.py
+@login_required
+def notifications(request):
+
+    request.user.credit_notifications.filter(is_read=False).update(is_read=True)
+
+    unread_notifications = request.user.credit_notifications.filter(is_read=False)
+    read_notifications = request.user.credit_notifications.filter(is_read=True)[:10]  # Últimas 10 leídas
+    
+    return render(request, 'bingo_app/notifications.html', {
+        'unread_notifications': unread_notifications,
+        'read_notifications': read_notifications
+    })
+
+# views.py
+@login_required
+def mark_notification_as_read(request, notification_id):
+    notification = get_object_or_404(CreditRequestNotification, id=notification_id, user=request.user)
+    notification.is_read = True
+    notification.save()
+    return redirect('process_request', notification.credit_request.id)
+
+
+@login_required
+def delete_notification(request, notification_id):
+    notification = get_object_or_404(
+        CreditRequestNotification,
+        id=notification_id,
+        user=request.user  # Solo el dueño puede eliminar
+    )
+    notification.delete()
+    
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'status': 'success', 'remaining': request.user.credit_notifications.count()})
+    
+    return redirect('notifications')

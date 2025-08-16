@@ -1,0 +1,162 @@
+{% extends "bingo_app/base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Tus Notificaciones</h2>
+        {% if unread_notifications %}
+        <button id="mark-all-read" class="btn btn-sm btn-outline-primary">
+            <i class="fas fa-check-circle me-1"></i> Marcar todas como leídas
+        </button>
+        {% endif %}
+    </div>
+    
+    <!-- No leídas -->
+    <div class="mb-4">
+      
+        {% if unread_notifications %}
+            <div class="list-group">
+                {% for notification in unread_notifications %}
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <a href="{% url 'process_request' notification.credit_request.id %}" 
+                       class="flex-grow-1 text-decoration-none text-dark">
+                        <div class="d-flex justify-content-between">
+                            <span>Solicitud de crédito de {{ notification.credit_request.user.username }} - ${{ notification.credit_request.amount }}</span>
+                            <small class="text-muted ms-3">{{ notification.created_at|timesince }}</small>
+                        </div>
+                    </a>
+                    <button class="btn btn-sm btn-link text-danger delete-notification ms-2" 
+                            data-notification-id="{{ notification.id }}"
+                            title="Eliminar notificación">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+        {% endif %}
+    </div>
+    
+    <!-- Leídas -->
+    <div>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h4></h4>
+            <small class="text-muted">{{ read_notifications|length }} leídas</small>
+        </div>
+        {% if read_notifications %}
+            <div class="list-group">
+                {% for notification in read_notifications %}
+                <div class="list-group-item list-group-item-light d-flex justify-content-between align-items-center">
+                    <a href="{% url 'process_request' notification.credit_request.id %}" 
+                       class="flex-grow-1 text-decoration-none text-dark">
+                        <div class="d-flex justify-content-between">
+                            <span>Solicitud de crédito de {{ notification.credit_request.user.username }} - ${{ notification.credit_request.amount }}</span>
+                            <small class="text-muted ms-3">{{ notification.created_at|timesince }}</small>
+                        </div>
+                    </a>
+                    <button class="btn btn-sm btn-link text-danger delete-notification ms-2" 
+                            data-notification-id="{{ notification.id }}"
+                            title="Eliminar notificación">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-info">No tienes notificaciones anteriores</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Manejar eliminación de notificaciones
+    document.querySelectorAll('.delete-notification').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const notificationId = this.dataset.notificationId;
+            const notificationItem = this.closest('.list-group-item');
+            
+            if (confirm('¿Estás seguro de que quieres eliminar esta notificación?')) {
+                fetch(`/notifications/delete/${notificationId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Eliminar visualmente el elemento
+                        notificationItem.remove();
+                        
+                        // Actualizar contadores
+                        updateNotificationCounts();
+                        
+                        // Mostrar mensaje de éxito
+                        showToast('Notificación eliminada', 'success');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error al eliminar la notificación', 'danger');
+                });
+            }
+        });
+    });
+    
+    // Marcar todas como leídas
+    const markAllReadBtn = document.getElementById('mark-all-read');
+    if (markAllReadBtn) {
+        markAllReadBtn.addEventListener('click', function() {
+            fetch('/notifications/mark-all-read/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Recargar la página para reflejar los cambios
+                    window.location.reload();
+                }
+            });
+        });
+    }
+    
+    function updateNotificationCounts() {
+        // Actualizar los contadores en los títulos
+        const unreadCount = document.querySelectorAll('.list-group-item:not(.list-group-item-light)').length;
+        const readCount = document.querySelectorAll('.list-group-item.list-group-item-light').length;
+        
+        document.querySelector('small[data-unread-count]').textContent = `${unreadCount} sin leer`;
+        document.querySelector('small[data-read-count]').textContent = `${readCount} leídas`;
+    }
+    
+    function showToast(message, type) {
+        // Implementación básica de toast - puedes reemplazar con tu librería favorita
+        const toast = document.createElement('div');
+        toast.className = `position-fixed bottom-0 end-0 p-3`;
+        toast.innerHTML = `
+            <div class="toast show align-items-center text-white bg-${type} border-0" role="alert">
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+});
+</script>
+{% endblock %}

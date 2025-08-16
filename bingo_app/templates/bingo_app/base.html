@@ -9,13 +9,13 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         :root {
-            --primary-color: #2C3E50;  /* Azul oscuro para navbar */
-            --secondary-color: #14202b; /* Azul más oscuro para hover */
-            --accent-color: #E74C3C;   /* Rojo/accent para detalles */
-            --background-color: #161f2c; /* Fondo azul oscuro */
-            --card-bg: #2C3E50;        /* Fondo tarjetas */
-            --text-light: #ECF0F1;      /* Texto claro */
-            --text-muted: #BDC3C7;      /* Texto secundario */
+            --primary-color: #2C3E50;
+            --secondary-color: #14202b;
+            --accent-color: #E74C3C;
+            --background-color: #161f2c;
+            --card-bg: #2C3E50;
+            --text-light: #ECF0F1;
+            --text-muted: #BDC3C7;
         }
         
         body {
@@ -51,7 +51,7 @@
             border-color: #C0392B;
         }
         
-        .join-button {
+.join-button {
             background-color: var(--accent-color);
             color: white;
             border: none;
@@ -82,6 +82,14 @@
         .admin-item:hover {
             background-color: rgba(231, 76, 60, 0.2);
         }
+
+        /* Estilos para notificaciones */
+        .notification-badge {
+            position: relative;
+            top: -10px;
+            right: -5px;
+            font-size: 0.7em;
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -106,6 +114,7 @@
                             <i class="fas fa-ticket-alt me-1"></i> Rifas
                         </a>
                     </li>
+                    {% if user.is_authenticated %}
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'messaging' %}">
                             <i class="fas fa-envelope me-1"></i> Mensajes
@@ -113,9 +122,11 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'request_withdrawal' %}">
-                            <i class="fas fa-money-bill-wave"></i> Retiros
+                            <i class="fas fa-money-bill-wave me-1"></i> Retiros
                         </a>
                     </li>
+                    {% endif %}
+                    
                     {% if user.is_authenticated and user.is_organizer %}
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'organizer_dashboard' %}">
@@ -125,11 +136,52 @@
                     {% endif %}
                 </ul>
                 <ul class="navbar-nav ms-auto">
-                    {% if user.is_authenticated %}
+                    {% if user.is_authenticated and user.is_staff %}
+                        <!-- Notificaciones -->
+                        <!-- Reemplaza la parte de notificaciones en tu navbar con esto: -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="notificationsDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-bell"></i>
+                            {% if global_unread_count > 0 %}
+                            <span class="badge bg-danger notification-badge">{{ global_unread_count }}</span>
+                            {% endif %}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><h6 class="dropdown-header">Notificaciones</h6></li>
+                                {% for notification in global_unread_notifications %}
+                                <li>
+                                    <div class="d-flex justify-content-between align-items-center px-3 py-2">
+                                        <a class="flex-grow-1 text-decoration-none" 
+                                        href="{% url 'mark_notification_as_read' notification.id %}">
+                                            <div>
+                                                <strong>Solicitud de crédito</strong><br>
+                                                <small>{{ notification.credit_request.user.username }} - ${{ notification.credit_request.amount }}</small>
+                                            </div>
+                                        </a>
+                                        <button class="btn btn-sm btn-link text-danger delete-notification" 
+                                                data-notification-id="{{ notification.id }}"
+                                                title="Eliminar notificación">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                {% empty %}
+                                <li><a class="dropdown-item text-muted" href="#">No hay notificaciones nuevas</a></li>
+                                {% endfor %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item text-center" href="{% url 'notifications' %}">
+                                        <small>Ver todas las notificaciones</small>
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                        
+                        <!-- Perfil de usuario -->
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
                                 <i class="fas fa-user me-1"></i> {{ user.username }}
-                                <span id="credit-balance" class="badge bg-light text-dark ms-2">
+                                <span class="badge bg-light text-dark ms-2">
                                     {{ user.credit_balance }} créditos
                                 </span>
                             </a>
@@ -142,23 +194,26 @@
                                 </a></li>
                                 
                                 {% if user.is_organizer %}
-                                    <li><a class="dropdown-item" href="{% url 'create_game' %}">
-                                        <i class="fas fa-plus me-1"></i> Crear juego
-                                    </a></li>
+                                <li><a class="dropdown-item" href="{% url 'create_game' %}">
+                                    <i class="fas fa-plus me-1"></i> Crear juego
+                                </a></li>
                                 {% endif %}
                                 
                                 {% if user.is_staff %}
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><h6 class="dropdown-header text-uppercase text-warning">Administración</h6></li>
-                                    <li><a class="dropdown-item admin-item" href="{% url 'credit_requests_list' %}">
-                                        <i class="fas fa-list-check me-1"></i> Solicitudes de crédito
-                                    </a></li>
-                                    <li><a class="dropdown-item admin-item" href="{% url 'transaction_history' %}">
-                                        <i class="fas fa-history me-1"></i> Historial de transacciones
-                                    </a></li>
-                                    <li><a class="dropdown-item admin-item" href="{% url 'percentage_settings' %}">
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header text-warning">Administración</h6></li>
+                                <li><a class="dropdown-item" href="{% url 'credit_requests_list' %}">
+                                    <i class="fas fa-list-check me-1"></i> Solicitudes de credito
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'transaction_history' %}">
+                                    <i class="fas fa-history me-1"></i> Transacciones
+                                </a></li>
+                                                                    <li><a class="dropdown-item admin-item" href="{% url 'percentage_settings' %}">
                                         <i class="fas fa-percent me-1"></i> Configuración de porcentajes
                                     </a></li>
+                               <li><a class="dropdown-item" href="{% url 'payment_methods_list' %}">
+                                    <i class="fas fa-credit-card me-1"></i> Métodos de pago
+                                </a></li>
                                     <li>
                                         <a class="dropdown-item admin-item" href="{% url 'withdrawal_requests' %}">
                                             <i class="fas fa-money-bill-wave"></i> Retiros
@@ -175,8 +230,8 @@
                                 <li>
                                     <form action="{% url 'logout' %}" method="post" class="d-inline">
                                         {% csrf_token %}
-                                        <button type="submit" class="dropdown-item" style="cursor:pointer;">
-                                            <i class="fas fa-sign-out-alt me-1"></i> Cerrar sesión
+                                        <button type="submit" class="dropdown-item">
+                                            <i class="fas fa-sign-out-alt me-1"></i> Salir
                                         </button>
                                     </form>
                                 </li>
@@ -202,10 +257,10 @@
     <main class="main-container">
         <div class="container">
             {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
             {% endfor %}
             
             {% block content %}{% endblock %}

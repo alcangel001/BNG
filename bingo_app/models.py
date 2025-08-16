@@ -18,6 +18,10 @@ class User(AbstractUser):
     is_admin = models.BooleanField(default=False)
     credit_balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
+    
+    def unread_notifications(self, limit=5):
+        return self.credit_notifications.filter(is_read=False).order_by('-created_at')[:limit]
+
     def __str__(self):
         return self.username
 
@@ -807,3 +811,15 @@ class BankAccount(models.Model):
 
     def __str__(self):
         return f"{self.title} ({'Activo' if self.is_active else 'Inactivo'})"
+    
+
+class CreditRequestNotification(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='credit_notifications')
+    credit_request = models.ForeignKey(CreditRequest, on_delete=models.CASCADE)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+
