@@ -40,6 +40,8 @@ urlpatterns = [
     ])),
 
 
+   
+
     path('credit/', include([
         path('request/', views.request_credits, name='request_credits'),
         #path('history/', views.credit_history, name='credit_history'),
@@ -53,9 +55,15 @@ urlpatterns = [
             path('percentages/', views.percentage_settings, name='percentage_settings'),
             path('admin/withdrawals/', views.withdrawal_requests, name='withdrawal_requests'),
             path('admin/withdrawals/all/', views.all_withdrawal_requests, name='all_withdrawal_requests'),
-            path('admin/withdrawals/<int:request_id>/', views.process_withdrawal, name='process_withdrawal')
+            path('admin/withdrawals/<int:request_id>/', views.process_withdrawal, name='process_withdrawal'), 
+            path('users/', views.user_management, name='user_management'),
+            path('users/block/<int:user_id>/', views.block_user, name='block_user'),
+            path('users/unblock/<int:user_id>/', views.unblock_user, name='unblock_user'),
         ])),
     ])),
+
+  
+
   
 ]
 

@@ -1,0 +1,32 @@
+{% extends 'bingo_app/base.html' %}
+
+{% block content %}
+<h2>Bloquear Usuario: {{ user.username }}</h2>
+<form method="post">
+    {% csrf_token %}
+    <div class="form-group">
+        <label for="block_type">Tipo de Bloqueo:</label>
+        <select name="block_type" id="block_type" class="form-control" required>
+            <option value="CHAT">Solo Chat</option>
+            <option value="GAMES">Juegos y Rifas</option>
+            <option value="FULL">Bloqueo Completo</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="duration">Duración:</label>
+        <select name="duration" id="duration" class="form-control" required>
+            <option value="1">1 día</option>
+            <option value="3">3 días</option>
+            <option value="7">1 semana</option>
+            <option value="30">1 mes</option>
+            <option value="permanent">Permanente</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="reason">Motivo:</label>
+        <textarea name="reason" id="reason" class="form-control" rows="3" required></textarea>
+    </div>
+    <button type="submit" class="btn btn-danger">Confirmar Bloqueo</button>
+    <a href="{% url 'user_management' %}" class="btn btn-secondary">Cancelar</a>
+</form>
+{% endblock %}

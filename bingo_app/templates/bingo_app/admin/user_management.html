@@ -1,0 +1,92 @@
+{% extends 'bingo_app/base.html' %}
+
+{% block content %}
+<h1 class="text-white">Gestión de Usuarios</h1>
+
+<h2 class="text-white">Usuarios Bloqueados</h2>
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr class="text-white">
+                <th class="text-white">Usuario</th>
+                <th class="text-white">Bloqueado por</th>
+                <th class="text-white">Motivo</th>
+                <th class="text-white">Fecha</th>
+                <th class="text-white">Hasta</th>
+                <th class="text-white">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in blocked_users %}
+            <tr class="text-white">
+                <td class="text-white">{{ user.username }}</td>
+                <td class="text-white">{{ user.blocked_by.username }}</td>
+                <td class="text-white">{{ user.block_reason|truncatechars:50 }}</td>
+                <td class="text-white">{{ user.blocked_at|date:"SHORT_DATE_FORMAT" }}</td>
+                <td class="text-white">
+                    {% if user.blocked_until %}
+                        {{ user.blocked_until|date:"SHORT_DATE_FORMAT" }}
+                    {% else %}
+                        Permanente
+                    {% endif %}
+                </td>
+                <td class="text-white">
+                    <a href="{% url 'unblock_user' user.id %}" class="btn btn-sm btn-success text-white">Desbloquear</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr class="text-white">
+                <td colspan="6" class="text-white">No hay usuarios bloqueados</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<h2 class="text-white">Todos los Usuarios</h2>
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr class="text-white">
+                <th class="text-white">Usuario</th>
+                <th class="text-white">Registro</th>
+                <th class="text-white">Rol</th>
+                <th class="text-white">Saldo</th>
+                <th class="text-white">Estado</th>
+                <th class="text-white">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr class="text-white">
+                <td class="text-white">{{ user.username }}</td>
+                <td class="text-white">{{ user.date_joined|date:"SHORT_DATE_FORMAT" }}</td>
+                <td class="text-white">
+                    {% if user.is_admin %}Admin
+                    {% elif user.is_organizer %}Organizador
+                    {% else %}Jugador
+                    {% endif %}
+                </td>
+                <td class="text-white">{{ user.credit_balance }}</td>
+                <td class="text-white">
+                    {% if user.is_currently_blocked %}
+                        <span class="badge badge-danger text-white">Bloqueado</span>
+                    {% else %}
+                        <span class="badge badge-success text-white">Activo</span>
+                    {% endif %}
+                </td>
+                <td class="text-white">
+                    {% if not user.is_admin %}
+                        {% if user.is_currently_blocked %}
+                            <a href="{% url 'unblock_user' user.id %}" class="btn btn-sm btn-success text-white">Desbloquear</a>
+                        {% else %}
+                            <a href="{% url 'block_user' user.id %}" class="btn btn-sm btn-warning text-white">Bloquear</a>
+                        {% endif %}
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

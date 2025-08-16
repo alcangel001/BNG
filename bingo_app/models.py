@@ -1,5 +1,5 @@
 from asyncio.log import logger
-from datetime import timezone
+from django.utils import timezone  # ✅
 from decimal import Decimal
 from django.db import models
 from django.contrib.auth.models import AbstractUser
@@ -18,7 +18,29 @@ class User(AbstractUser):
     is_admin = models.BooleanField(default=False)
     credit_balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
+     # Nuevos campos para bloqueo
+    is_blocked = models.BooleanField(default=False)
+    block_reason = models.TextField(blank=True)
+    blocked_until = models.DateTimeField(null=True, blank=True)
+    blocked_at = models.DateTimeField(null=True, blank=True)
+    blocked_by = models.ForeignKey(
+        'self', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='blocked_users'
+    )
     
+    @property
+    def is_currently_blocked(self):
+        if not self.is_blocked:
+            return False
+        if self.blocked_until and timezone.now() < self.blocked_until:
+            return True
+        if not self.blocked_until:  # Bloqueo permanente
+            return True
+        return False
+
     def unread_notifications(self, limit=5):
         return self.credit_notifications.filter(is_read=False).order_by('-created_at')[:limit]
 
@@ -821,5 +843,28 @@ class CreditRequestNotification(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+
+
+class UserBlockHistory(models.Model):
+    BLOCK_TYPES = [
+        ('CHAT', 'Bloqueo de chat'),
+        ('FULL', 'Bloqueo completo'),
+        ('GAMES', 'Bloqueo de juegos'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='block_history')
+    blocked_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='blocks_issued')
+    block_type = models.CharField(max_length=10, choices=BLOCK_TYPES)
+    reason = models.TextField()
+    blocked_at = models.DateTimeField(auto_now_add=True)
+    blocked_until = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        verbose_name_plural = "User Block Histories"
+        ordering = ['-blocked_at']
+    
+    def __str__(self):
+        return f"{self.user.username} bloqueado por {self.blocked_by.username}"
 
 

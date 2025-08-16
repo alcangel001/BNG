@@ -1,8 +1,10 @@
 from asyncio.log import logger
-from datetime import datetime
+from django.utils import timezone
 from decimal import Decimal
 import random
 import json
+
+import datetime
 
 from django.core.paginator import Paginator
 from django.http import JsonResponse
@@ -22,7 +24,7 @@ from .flash_messages import add_flash_message
 from .forms import PercentageSettingsForm, RegistrationForm, GameForm, BuyTicketForm, RaffleForm, CreditRequestForm, WithdrawalRequestForm,PaymentMethodForm
 from .models import (
     User, Game, Player, ChatMessage, Raffle, Ticket, 
-    Transaction, Message, CreditRequest, PercentageSettings, WithdrawalRequest,BankAccount, CreditRequestNotification
+    Transaction, Message, CreditRequest, PercentageSettings, UserBlockHistory, WithdrawalRequest,BankAccount, CreditRequestNotification
 )
 
 def register(request):
@@ -131,6 +133,15 @@ def game_room(request, game_id):
     game = get_object_or_404(Game, id=game_id)
     player, created = Player.objects.get_or_create(user=request.user, game=game)
     percentage_settings = PercentageSettings.objects.first()
+
+     # Verificar si el usuario está bloqueado de juegos
+    if request.user.is_currently_blocked and UserBlockHistory.objects.filter(
+        user=request.user, 
+        block_type__in=['GAMES', 'FULL'],
+        is_active=True
+    ).exists():
+        messages.error(request, 'Estás bloqueado y no puedes unirte a juegos')
+        return redirect('lobby')
     
     # Handle new player joining
     if created:
@@ -716,6 +727,17 @@ def message_list_api(request):
 @login_required
 @require_http_methods(["POST"])
 def send_message_api(request):
+
+    # Verificar si el usuario está bloqueado de chat
+    if request.user.is_currently_blocked and UserBlockHistory.objects.filter(
+        user=request.user, 
+        block_type__in=['CHAT', 'FULL'],
+        is_active=True
+    ).exists():
+        return JsonResponse({
+            'error': 'Estás bloqueado y no puedes enviar mensajes'
+        }, status=403)
+    
     try:
         data = json.loads(request.body)
         recipient = User.objects.get(id=data.get('recipient_id'))
@@ -934,6 +956,15 @@ def raffle_lobby(request):
 def raffle_detail(request, raffle_id):
     raffle = get_object_or_404(Raffle, id=raffle_id)
     percentage_settings = PercentageSettings.objects.first()
+    
+    # Verificar si el usuario está bloqueado de juegos
+    if request.user.is_currently_blocked and UserBlockHistory.objects.filter(
+        user=request.user, 
+        block_type__in=['GAMES', 'FULL'],
+        is_active=True
+    ).exists():
+        messages.error(request, 'Estás bloqueado y no puedes unirte a juegos')
+        return redirect('raffle_lobby')
     
     # Preparar datos de tickets
     tickets_dict = {t.number: t for t in raffle.tickets.select_related('owner')}
@@ -1524,3 +1555,88 @@ def delete_notification(request, notification_id):
         return JsonResponse({'status': 'success', 'remaining': request.user.credit_notifications.count()})
     
     return redirect('notifications')
+
+# En views.py, añade estas nuevas vistas
+
+@staff_member_required
+def block_user(request, user_id):
+    user_to_block = get_object_or_404(User, id=user_id)
+    
+    if request.method == 'POST':
+        block_type = request.POST.get('block_type')
+        reason = request.POST.get('reason', '')
+        duration = request.POST.get('duration')
+        
+        try:
+            with transaction.atomic():
+                # Calcular fecha de desbloqueo si es temporal
+                blocked_until = None
+                if duration and duration != 'permanent':
+                    days = int(duration)
+                    blocked_until = timezone.now() + timezone.timedelta(days=days)
+                
+                # Actualizar usuario
+                user_to_block.is_blocked = True
+                user_to_block.block_reason = reason
+                user_to_block.blocked_until = blocked_until
+                user_to_block.blocked_at = timezone.now()
+                user_to_block.blocked_by = request.user
+                user_to_block.save()
+                
+                # Registrar en historial
+                UserBlockHistory.objects.create(
+                    user=user_to_block,
+                    blocked_by=request.user,
+                    block_type=block_type,
+                    reason=reason,
+                    blocked_until=blocked_until
+                )
+                
+                messages.success(request, f'Usuario {user_to_block.username} bloqueado exitosamente')
+                return redirect('user_management')
+                
+        except Exception as e:
+            messages.error(request, f'Error al bloquear usuario: {str(e)}')
+    
+    return render(request, 'bingo_app/admin/block_user.html', {
+        'user': user_to_block
+    })
+
+@staff_member_required
+def unblock_user(request, user_id):
+    user_to_unblock = get_object_or_404(User, id=user_id)
+    
+    if request.method == 'POST':
+        try:
+            with transaction.atomic():
+                # Actualizar usuario
+                user_to_unblock.is_blocked = False
+                user_to_unblock.block_reason = ''
+                user_to_unblock.blocked_until = None
+                user_to_unblock.save()
+                
+                # Marcar bloqueos previos como inactivos
+                UserBlockHistory.objects.filter(
+                    user=user_to_unblock,
+                    is_active=True
+                ).update(is_active=False)
+                
+                messages.success(request, f'Usuario {user_to_unblock.username} desbloqueado exitosamente')
+                return redirect('user_management')
+                
+        except Exception as e:
+            messages.error(request, f'Error al desbloquear usuario: {str(e)}')
+    
+    return render(request, 'bingo_app/admin/unblock_user.html', {
+        'user': user_to_unblock
+    })
+
+@staff_member_required
+def user_management(request):
+    users = User.objects.all().order_by('-date_joined')
+    blocked_users = User.objects.filter(is_blocked=True)
+    
+    return render(request, 'bingo_app/admin/user_management.html', {
+        'users': users,
+        'blocked_users': blocked_users
+    })

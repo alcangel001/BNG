@@ -1,0 +1,11 @@
+{% extends 'bingo_app/base.html' %}
+
+{% block content %}
+<h2>Desbloquear Usuario: {{ user.username }}</h2>
+<p>¿Estás seguro que deseas desbloquear a este usuario?</p>
+<form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-success">Confirmar Desbloqueo</button>
+    <a href="{% url 'user_management' %}" class="btn btn-secondary">Cancelar</a>
+</form>
+{% endblock %}
