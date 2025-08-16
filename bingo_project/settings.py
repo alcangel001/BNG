@@ -90,6 +90,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'bingo_app.notifications_context_processor.notifications',
+                'bingo_app.context_processors.notifications_global'
 
             ],
         },
