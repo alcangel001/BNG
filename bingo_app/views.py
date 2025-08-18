@@ -1398,12 +1398,11 @@ def call_number(request, game_id):
         game.called_numbers.append(number)
         game.save()
         
-        # Verificar si algún jugador ha ganado
-        winner = None
+        # Verificar si hay ganadores
+        winners = []
         for player in game.player_set.all():
             if player.check_bingo():
-                winner = player.user
-                break
+                winners.append(player.user)
         
         # Notificar via WebSocket
         channel_layer = get_channel_layer()
@@ -1414,52 +1413,59 @@ def call_number(request, game_id):
                 'number': number,
                 'called_numbers': game.called_numbers,
                 'is_manual': True,
-                'has_winner': winner is not None,
-                'winner': winner.username if winner else None
+                'has_winner': len(winners) > 0,
+                'winners': [winner.username for winner in winners] if winners else None
             }
         )
         
-        # Si hay ganador, finalizar el juego (esto activará la distribución de premios)
-        if winner:
-            print(f"Ganador detectado: {winner.username}")
+        # Si hay ganadores, finalizar el juego
+        if winners:
+            print(f"Ganadores detectados: {', '.join([w.username for w in winners])}")
             try:
                 with transaction.atomic():
-                    success = game.end_game_manual(winner)
+                    success = game.end_game_manual(winners)
                     if not success:
-                        print("Error en end_game")
+                        print("Error en end_game_manual")
                         return JsonResponse({
                             'success': False, 
                             'error': 'Error al distribuir premios',
                             'has_winner': True
                         }, status=500)
                     
-                    # Verificar distribución
-                    winner.refresh_from_db()
-                    print(f"Nuevo balance del ganador: {winner.credit_balance}")
+                    # Verificar distribución para el primer ganador (solo para debug)
+                    if winners:
+                        winners[0].refresh_from_db()
+                        print(f"Nuevo balance del primer ganador: {winners[0].credit_balance}")
                     
                     return JsonResponse({
                         'success': True,
                         'has_winner': True,
-                        'winner': winner.username,
-                        'new_balance': float(winner.credit_balance)
+                        'winners': [winner.username for winner in winners],
+                        'winners_count': len(winners),
+                        'message': f"Premio distribuido entre {len(winners)} ganadores"
                     })
             except Exception as e:
                 print(f"Error en transacción: {str(e)}")
                 return JsonResponse({
                     'success': False,
                     'error': str(e),
-                    'has_winner': True
+                    'has_winner': True,
+                    'winners': [winner.username for winner in winners]
                 }, status=500)
         
         return JsonResponse({
             'success': True, 
-            'has_winner': False
+            'has_winner': False,
+            'called_numbers': game.called_numbers
         })
         
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Datos JSON inválidos'}, status=400)
+    except KeyError:
+        return JsonResponse({'success': False, 'error': 'Falta el número en la solicitud'}, status=400)
     except Exception as e:
         print(f"Error general: {str(e)}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
-    
 
 @staff_member_required
 def payment_methods_list(request):

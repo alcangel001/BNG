@@ -137,7 +137,7 @@ class BingoConsumer(AsyncWebsocketConsumer):
         self.game.refresh_from_db()
         prize = float(self.game.current_prize) if self.game.current_prize else 0.0
         
-        self.game.end_game(player.user)
+        self.game.end_game()
         return prize
 
     @database_sync_to_async

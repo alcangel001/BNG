@@ -206,251 +206,240 @@ class Game(models.Model):
             return True
         return False
 
-    def end_game(self, winner):
-        if not self.is_finished:
-            self.is_finished = True
-            self.winner = winner
-
-           
-            # Asegurarnos de que el premio actual está calculado correctamente
-            self.current_prize = self.calculate_current_prize()
-
-            channel_layer = get_channel_layer()
-            async_to_sync(channel_layer.group_send)(
-                f"user_{winner.id}",
-                {
-                    'type': 'win_notification',
-                    'message': f"¡Felicidades! Ganaste {self.name}",
-                }
-            )
-
-
-            print("ACTUALIZACION DEL PRECIO",self.current_prize)
-      
-            self.save()
-            try:
-                winning_player = Player.objects.get(user=winner, game=self)
-                winning_player.is_winner = True
-                winning_player.save()
-            except Player.DoesNotExist:
-                logger.error(f"No se encontró el jugador ganador para el usuario {winner.username} en el juego {self.name}")
+    def end_game(self):
+        if not self.is_finished and self.is_started:
+            # Encontrar todos los jugadores que han hecho bingo
+            players = Player.objects.filter(game=self)
+            winners = []
+            
+            for player in players:
+                if player.check_bingo():
+                    winners.append(player.user)
+            
+            if not winners:
+                # No hay ganadores, terminar el juego sin premio
+                self.is_finished = True
+                self.save()
                 return False
             
-
-            print("PRIMER SALDO PRUEBAS", winner.credit_balance)
-                
-            # Distribuir el premio según los porcentajes
-            percentage_settings = PercentageSettings.objects.first()
-            if percentage_settings and self.current_prize > 0:
-                try:
-                    with transaction.atomic():
-
-                         # Calcular el total de cartones vendidos
-                        
-                        total_cards_sold = self.max_cards_sold
-                        print("TOTAL CARTONES VENDIDOS",total_cards_sold)
-                        total_cards_value = total_cards_sold * self.card_price
-                        # Calcular los porcentajes
-                        admin_percentage = percentage_settings.admin_percentage / 100
-                        organizer_percentage = percentage_settings.organizer_percentage / 100
-                        player_percentage = percentage_settings.player_percentage / 100
-                        
-                        # Distribuir al jugador ganador
-                        player_prize = self.current_prize * Decimal(player_percentage)
-                        winner.credit_balance += player_prize
-                        winner.save()
-                        print("DEPURANDO JUGADOR AUMENTO", player_prize)
-                        print("DEPURANDO JUGADOR SALDO ACTUAL 1",winner.credit_balance)
-                        
-
-                        Transaction.objects.create(
-                            user=winner,
-                            amount=player_prize,
-                            transaction_type='PRIZE',
-                            description=f"Premio por ganar {self.name} (parte jugador)",
-                            related_game=self
-                        )
-                        
-                        # Distribuir al organizador
-                        organizer_prize = self.current_prize * Decimal(organizer_percentage)
-
-                        print("PREMIOS DEL ORGANIZADOR",organizer_prize)
-                        print("ORGANIZADOR ",self.organizer)
-                        
-                        
-                        self.organizer.credit_balance += organizer_prize
-                        print("BALANCE", self.organizer.credit_balance)
-                        self.organizer.save()
-
-                        print("DEPURANDO JUGADOR SALDO ACTUAL 2",winner.credit_balance)
-                        
-                        Transaction.objects.create(
-                            user=self.organizer,
-                            amount=organizer_prize,
-                            transaction_type='ADMIN_ADD',
-                            description=f"Premio por juego {self.name} (parte organizador)",
-                            related_game=self
-                        )
-                        
-                        # Distribuir al admin
-                        admin = User.objects.filter(is_admin=True).first()
-                        if admin:
-                            admin_prize = self.current_prize * Decimal(admin_percentage)
-                            admin.credit_balance += admin_prize
-                            admin.save()
-                            
-                            Transaction.objects.create(
-                                user=admin,
-                                amount=admin_prize,
-                                transaction_type='ADMIN_ADD',
-                                description=f"Premio por juego {self.name} (parte administrador)",
-                                related_game=self
-                            ) # 2. Acreditar al organizador el valor total de cartones vendidos
-                            if total_cards_value > 0:
-                                self.organizer.credit_balance += total_cards_value
-                                print(total_cards_value)
-                                self.organizer.save()
-                                
-                                Transaction.objects.create(
-                                    user=self.organizer,
-                                    amount=total_cards_value,
-                                    transaction_type='CARDS_REVENUE',
-                                    description=f"Ingresos por cartones vendidos en {self.name}",
-                                    related_game=self
-                                )
-
-                        print("DEPURANDO JUGADOR SALDO ACTUAL 3",winner.credit_balance)
-                        
-                        return True
-                except Exception as e:
-                    # Manejar errores en la transacción
-                    logger.error(f"Error al distribuir premio: {str(e)}")
-                    return False
-            return True
-        return False
-    
-    def end_game_manual(self, winner):
-        if not self.is_finished:
-            self.is_finished = True
-            self.winner = winner
+            # Calcular el premio actual
             self.current_prize = self.calculate_current_prize()
+            self.is_finished = True
+            self.save()
+            
+            # Obtener configuraciones de porcentaje
+            percentage_settings = PercentageSettings.objects.first()
+            if not percentage_settings or self.current_prize <= 0:
+                return False
             
             try:
                 with transaction.atomic():
-                    # Bloquear registros primero
-                    winner = User.objects.select_for_update().get(pk=winner.pk)
-                    organizer = User.objects.select_for_update().get(pk=self.organizer.pk)
-                    admin = User.objects.filter(is_admin=True).select_for_update().first()
-                    
-                    # Calcular todos los premios ANTES de modificar balances
-                    percentage_settings = PercentageSettings.objects.first()
-                    if not percentage_settings or self.current_prize <= 0:
-                        return False
-                    
+                    # Calcular valores
                     total_cards_value = self.max_cards_sold * self.card_price
+                    num_winners = len(winners)
                     
-                    # Calcular montos
-                    amounts = {
-                        'player': self.current_prize * Decimal(percentage_settings.player_percentage / 100),
-                        'organizer': self.current_prize * Decimal(percentage_settings.organizer_percentage / 100),
-                        'admin': self.current_prize * Decimal(percentage_settings.admin_percentage / 100),
-                        'cards': total_cards_value
-                    }
+                    # Parte del premio que va a los jugadores (dividido entre ganadores)
+                    player_prize_per_winner = (self.current_prize * Decimal(percentage_settings.player_percentage / 100)) / num_winners
                     
-                    # Preparar actualizaciones
-                    updates = {}
+                    # Parte del organizador
+                    organizer_prize = self.current_prize * Decimal(percentage_settings.organizer_percentage / 100)
                     
-                    # Siempre dar premio al jugador
-                    updates[winner] = amounts['player']
+                    # Parte del admin
+                    admin_prize = self.current_prize * Decimal(percentage_settings.admin_percentage / 100)
                     
-                    # Verificar si es organizador
-                    if winner == organizer:
-                        updates[winner] += amounts['organizer'] + amounts['cards']
-                    else:
-                        updates[organizer] = amounts['organizer'] + amounts['cards']
-                        updates[winner] = amounts['player']
+                    # Actualizar balances
+                    # 1. Premios para los ganadores
+                    for winner in winners:
+                        winner.credit_balance += player_prize_per_winner
+                        winner.save()
+                        
+                        Transaction.objects.create(
+                            user=winner,
+                            amount=player_prize_per_winner,
+                            transaction_type='PRIZE',
+                            description=f"Premio compartido por ganar {self.name}",
+                            related_game=self
+                        )
                     
-                    # Verificar si es admin (y no es el organizador)
-                    if admin and admin != winner and admin != organizer:
-                        updates[admin] = amounts['admin']
+                    # 2. Parte del organizador
+                    self.organizer.credit_balance += organizer_prize
+                    self.organizer.save()
                     
-                    # Aplicar TODAS las actualizaciones en una sola operación por usuario
-                    for user, amount in updates.items():
-                        user.credit_balance += amount
-                        user.save()
-                    
-                    # Guardar estado del juego
-                    self.save()
-                    
-                    # Registrar transacciones
                     Transaction.objects.create(
-                        user=winner,
-                        amount=amounts['player'],
-                        transaction_type='PRIZE',
-                        description=f"Premio por ganar {self.name}",
+                        user=self.organizer,
+                        amount=organizer_prize,
+                        transaction_type='ORGANIZER_PRIZE',
+                        description=f"Parte organizador de {self.name}",
                         related_game=self
                     )
                     
-                    if winner == organizer:
-                        Transaction.objects.create(
-                            user=winner,
-                            amount=amounts['organizer'],
-                            transaction_type='ORGANIZER_PRIZE',
-                            description=f"Parte organizador de {self.name}",
-                            related_game=self
-                        )
-                        Transaction.objects.create(
-                            user=winner,
-                            amount=amounts['cards'],
-                            transaction_type='CARDS_REVENUE',
-                            description=f"Ingresos por cartones en {self.name}",
-                            related_game=self
-                        )
-                    else:
-                        Transaction.objects.create(
-                            user=organizer,
-                            amount=amounts['organizer'],
-                            transaction_type='ORGANIZER_PRIZE',
-                            description=f"Parte organizador de {self.name}",
-                            related_game=self
-                        )
-                        Transaction.objects.create(
-                            user=organizer,
-                            amount=amounts['cards'],
-                            transaction_type='CARDS_REVENUE',
-                            description=f"Ingresos por cartones en {self.name}",
-                            related_game=self
-                        )
-                    
-                    if admin and admin != winner and admin != organizer:
+                    # 3. Parte del admin (si existe)
+                    admin = User.objects.filter(is_admin=True).first()
+                    if admin:
+                        admin.credit_balance += admin_prize
+                        admin.save()
+                        
                         Transaction.objects.create(
                             user=admin,
-                            amount=amounts['admin'],
+                            amount=admin_prize,
                             transaction_type='ADMIN_PRIZE',
                             description=f"Parte admin de {self.name}",
                             related_game=self
                         )
                     
-                    # Notificación
+                    # 4. Ingresos por cartones vendidos (va al organizador)
+                    if total_cards_value > 0:
+                        self.organizer.credit_balance += total_cards_value
+                        self.organizer.save()
+                        
+                        Transaction.objects.create(
+                            user=self.organizer,
+                            amount=total_cards_value,
+                            transaction_type='CARDS_REVENUE',
+                            description=f"Ingresos por cartones vendidos en {self.name}",
+                            related_game=self
+                        )
+                    
+                    # Actualizar los jugadores ganadores
+                    Player.objects.filter(user__in=winners, game=self).update(is_winner=True)
+                    
+                    # Notificar a los ganadores
                     channel_layer = get_channel_layer()
-                    async_to_sync(channel_layer.group_send)(
-                        f"user_{winner.id}",
-                        {
-                            'type': 'win_notification',
-                            'message': f"¡Ganaste {self.current_prize} créditos en {self.name}",
-                            'details': {
-                                'player_prize': float(amounts['player']),
-                                'organizer_prize': float(amounts['organizer']) if winner == organizer else 0,
-                                'admin_prize': float(amounts['admin']) if admin and admin != winner and admin != organizer else 0,
-                                'cards_revenue': float(amounts['cards']) if winner == organizer else 0
+                    for winner in winners:
+                        async_to_sync(channel_layer.group_send)(
+                            f"user_{winner.id}",
+                            {
+                                'type': 'win_notification',
+                                'message': f"¡Ganaste {player_prize_per_winner} créditos en {self.name} (compartido entre {num_winners} ganadores)",
+                                'details': {
+                                    'player_prize': float(player_prize_per_winner),
+                                    'total_winners': num_winners,
+                                    'total_prize': float(self.current_prize)
+                                }
                             }
-                        }
-                    )
+                        )
                     
                     return True
                     
             except Exception as e:
-                logger.error(f"Error en end_game: {str(e)}", exc_info=True)
+                logger.error(f"Error en end_game con múltiples ganadores: {str(e)}", exc_info=True)
+                return False
+        
+        return False
+    
+    def end_game_manual(self, winners):
+        """
+        Finaliza el juego manualmente con uno o varios ganadores.
+        winners: Puede ser un User individual o una lista de Users
+        """
+        if not self.is_finished:
+            self.is_finished = True
+            self.current_prize = self.calculate_current_prize()
+            
+            # Normalizar winners a lista si es un solo usuario
+            if not isinstance(winners, (list, tuple)):
+                winners = [winners]
+            
+            self.save()
+            
+            # Obtener configuraciones de porcentaje
+            percentage_settings = PercentageSettings.objects.first()
+            if not percentage_settings or self.current_prize <= 0:
+                return False
+            
+            try:
+                with transaction.atomic():
+                    # Calcular valores
+                    total_cards_value = self.max_cards_sold * self.card_price
+                    num_winners = len(winners)
+                    
+                    # Parte del premio que va a los jugadores (dividido entre ganadores)
+                    player_prize_per_winner = (self.current_prize * Decimal(percentage_settings.player_percentage / 100)) / num_winners
+                    
+                    # Parte del organizador
+                    organizer_prize = self.current_prize * Decimal(percentage_settings.organizer_percentage / 100)
+                    
+                    # Parte del admin
+                    admin_prize = self.current_prize * Decimal(percentage_settings.admin_percentage / 100)
+                    
+                    # Actualizar balances
+                    # 1. Premios para los ganadores
+                    for winner in winners:
+                        winner.credit_balance += player_prize_per_winner
+                        winner.save()
+                        
+                        Transaction.objects.create(
+                            user=winner,
+                            amount=player_prize_per_winner,
+                            transaction_type='PRIZE',
+                            description=f"Premio por ganar {self.name}" + 
+                                    (f" (compartido entre {num_winners} ganadores)" if num_winners > 1 else ""),
+                            related_game=self
+                        )
+                    
+                    # 2. Parte del organizador
+                    self.organizer.credit_balance += organizer_prize
+                    self.organizer.save()
+                    
+                    Transaction.objects.create(
+                        user=self.organizer,
+                        amount=organizer_prize,
+                        transaction_type='ORGANIZER_PRIZE',
+                        description=f"Parte organizador de {self.name}",
+                        related_game=self
+                    )
+                    
+                    # 3. Parte del admin (si existe)
+                    admin = User.objects.filter(is_admin=True).first()
+                    if admin:
+                        admin.credit_balance += admin_prize
+                        admin.save()
+                        
+                        Transaction.objects.create(
+                            user=admin,
+                            amount=admin_prize,
+                            transaction_type='ADMIN_PRIZE',
+                            description=f"Parte admin de {self.name}",
+                            related_game=self
+                        )
+                    
+                    # 4. Ingresos por cartones vendidos (va al organizador)
+                    if total_cards_value > 0:
+                        self.organizer.credit_balance += total_cards_value
+                        self.organizer.save()
+                        
+                        Transaction.objects.create(
+                            user=self.organizer,
+                            amount=total_cards_value,
+                            transaction_type='CARDS_REVENUE',
+                            description=f"Ingresos por cartones vendidos en {self.name}",
+                            related_game=self
+                        )
+                    
+                    # Actualizar los jugadores ganadores
+                    Player.objects.filter(user__in=winners, game=self).update(is_winner=True)
+                    
+                    # Notificar a los ganadores
+                    channel_layer = get_channel_layer()
+                    for winner in winners:
+                        async_to_sync(channel_layer.group_send)(
+                            f"user_{winner.id}",
+                            {
+                                'type': 'win_notification',
+                                'message': f"¡Ganaste {player_prize_per_winner:.2f} créditos en {self.name}" + 
+                                        (f" (compartido entre {num_winners} ganadores)" if num_winners > 1 else ""),
+                                'details': {
+                                    'player_prize': float(player_prize_per_winner),
+                                    'total_winners': num_winners,
+                                    'total_prize': float(self.current_prize)
+                                }
+                            }
+                        )
+                    
+                    return True
+                    
+            except Exception as e:
+                logger.error(f"Error en end_game_manual: {str(e)}", exc_info=True)
                 return False
         return False
 
