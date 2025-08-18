@@ -1123,7 +1123,6 @@ def check_raffle_progress(raffle):
 @login_required
 def draw_raffle(request, raffle_id):
     raffle = get_object_or_404(Raffle, id=raffle_id)
-    percentage_settings = PercentageSettings.objects.first()
     
     # Validaciones
     if request.user != raffle.organizer:
@@ -1138,35 +1137,33 @@ def draw_raffle(request, raffle_id):
         messages.error(request, "No hay tickets vendidos")
         return redirect('raffle_detail', raffle_id=raffle.id)
     
-     # Verificar si hay un número ganador manual definido
-    if raffle.is_manual_winner and raffle.manual_winning_number:
-        try:
-            winning_ticket = raffle.tickets.get(number=raffle.manual_winning_number)
-        except Ticket.DoesNotExist:
-            messages.error(request, f"El número ganador manual #{raffle.manual_winning_number} no fue vendido")
-            return redirect('raffle_detail', raffle_id=raffle.id)
-    else:
-        # Selección aleatoria normal
-        winning_ticket = random.choice(raffle.tickets.all())
-    
     try:
         with transaction.atomic():
-            # 1. Seleccionar ganador con select_for_update para bloquear el registro
-            winning_ticket = Ticket.objects.select_related('owner').select_for_update().get(
-                id=random.choice([t.id for t in raffle.tickets.all()])
-            )
+            # 1. Determinar el ticket ganador (manual o aleatorio)
+            if raffle.is_manual_winner and raffle.manual_winning_number:
+                # Bloquear el ticket manual para evitar cambios
+                winning_ticket = Ticket.objects.select_related('owner').select_for_update().get(
+                    number=raffle.manual_winning_number,
+                    raffle=raffle
+                )
+            else:
+                # Selección aleatoria normal con bloqueo
+                winning_ticket = Ticket.objects.select_related('owner').select_for_update().get(
+                    id=random.choice([t.id for t in raffle.tickets.all()])
+                )
+            
             winner = winning_ticket.owner
             
-            # 2. Calcular valores
+            # 2. Calcular valores - el ganador recibe todo el premio
             total_tickets_income = raffle.ticket_price * raffle.tickets.count()
-            player_percent = percentage_settings.player_percentage / 100
-            player_prize = raffle.prize * Decimal(player_percent)
+            player_prize = raffle.prize  # Premio completo
             
-            # 3. Actualizar saldo del ganador de forma segura
-            winner.refresh_from_db()  # Asegurarnos de tener los datos más recientes
+            # 3. Actualizar saldo del ganador
+            winner.refresh_from_db()
             winner.credit_balance += player_prize
             winner.save()
 
+            # Notificación en tiempo real
             channel_layer = get_channel_layer()
             async_to_sync(channel_layer.group_send)(
                 f"user_{winner.id}",
@@ -1175,21 +1172,18 @@ def draw_raffle(request, raffle_id):
                     'message': f"¡Felicidades! Ganaste {raffle.title}",
                 }
             )
-
             
-            # Registrar transacción
+            # Registrar transacción del ganador
             Transaction.objects.create(
                 user=winner,
                 amount=player_prize,
                 transaction_type='PRIZE',
-                description=f"Premio de {raffle.title} ({percentage_settings.player_percentage}% de {raffle.prize})",
+                description=f"Premio completo de {raffle.title}",
                 related_game=None
             )
             
-            # 4. Distribución al organizador
-            organizer_percent = percentage_settings.organizer_percentage / 100
-            organizer_prize_portion = raffle.prize * Decimal(organizer_percent)
-            organizer_total = organizer_prize_portion + total_tickets_income
+            # 4. Distribución al organizador (solo tickets)
+            organizer_total = total_tickets_income
             
             raffle.organizer.refresh_from_db()
             raffle.organizer.credit_balance += organizer_total
@@ -1199,29 +1193,11 @@ def draw_raffle(request, raffle_id):
                 user=raffle.organizer,
                 amount=organizer_total,
                 transaction_type='RAFFLE_INCOME',
-                description=f"Ingresos de {raffle.title} ({percentage_settings.organizer_percentage}% premio + tickets)",
+                description=f"Ingresos por tickets de {raffle.title}",
                 related_game=None
             )
             
-            # 5. Distribución al admin
-            admin = User.objects.filter(is_admin=True).first()
-            if admin:
-                admin_percent = percentage_settings.admin_percentage / 100
-                admin_prize = raffle.prize * Decimal(admin_percent)
-                
-                admin.refresh_from_db()
-                admin.credit_balance += admin_prize
-                admin.save()
-                
-                Transaction.objects.create(
-                    user=admin,
-                    amount=admin_prize,
-                    transaction_type='ADMIN_ADD',
-                    description=f"Porcentaje de {raffle.title}",
-                    related_game=None
-                )
-            
-            # 6. Actualizar rifa
+            # 5. Actualizar rifa
             raffle.winning_number = winning_ticket.number
             raffle.winner = winner
             raffle.status = 'FINISHED'
@@ -1230,10 +1206,11 @@ def draw_raffle(request, raffle_id):
             raffle.save()
 
             request.session['show_win_notification'] = {
-                    'message': f"¡GANASTE LA RIFA! Premio: {raffle.prize} créditos",
-                    'prize': float(raffle.prize),
-                    'game': raffle.title
-                }
+                'message': f"¡GANASTE LA RIFA! Premio: {raffle.prize} créditos",
+                'prize': float(raffle.prize),
+                'game': raffle.title
+            }
+            
             messages.success(request, 
                 f'¡Sorteo completado! Ganador: {winner.username} '
                 f'con ticket #{winning_ticket.number}. '
@@ -1243,6 +1220,9 @@ def draw_raffle(request, raffle_id):
 
             return redirect('raffle_detail', raffle_id=raffle.id)
             
+    except Ticket.DoesNotExist:
+        messages.error(request, f"El número ganador manual #{raffle.manual_winning_number} no fue vendido")
+        return redirect('raffle_detail', raffle_id=raffle.id)
     except Exception as e:
         messages.error(request, f'Error en sorteo: {str(e)}')
         logger.error(f"Error en draw_raffle: {str(e)}", exc_info=True)
