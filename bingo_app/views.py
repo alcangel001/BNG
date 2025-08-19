@@ -78,17 +78,25 @@ def create_game(request):
         form = GameForm(request.POST)
         if form.is_valid():
             # Verificar que el organizador tenga suficiente saldo
+            percentage_settings = PercentageSettings.objects.first()
+            entry_commission_percentage = percentage_settings.entry_commission if percentage_settings else 5.00
             base_prize = form.cleaned_data['base_prize']
-            if request.user.credit_balance < base_prize:
-                messages.error(request, f'Saldo insuficiente. Necesitas {base_prize} créditos para establecer este premio')
+
+            entry_commission = (base_prize * entry_commission_percentage) / 100
+            total_cost = base_prize + entry_commission
+
+
+            # Verificar saldo suficiente (premio + comisión)
+            if request.user.credit_balance < total_cost:
+                messages.error(request, f'Saldo insuficiente. Necesitas {total_cost} créditos (premio: {base_prize} + comisión: {entry_commission})')
                 return render(request, 'bingo_app/create_game.html', {'form': form})
             
             try:
                 with transaction.atomic():
                     # Descontar el premio base del saldo del organizador
-                    request.user.credit_balance -= base_prize
+                    request.user.credit_balance -= total_cost
                     request.user.save()
-                    
+
                     # Crear el juego
                     game = form.save(commit=False)
                     game.organizer = request.user
@@ -110,12 +118,35 @@ def create_game(request):
                     Transaction.objects.create(
                         user=request.user,
                         amount=-base_prize,
-                        transaction_type='PURCHASE',
+                        transaction_type='PRIZE',
                         description=f"Premio base para juego {game.name}",
                         related_game=game
                     )
+
+                    # Registrar transacción de la comisión
+                    Transaction.objects.create(
+                        user=request.user,
+                        amount=-entry_commission,
+                        transaction_type='ENTRY_COMMISSION',
+                        description=f"Comisión por creación de juego {game.name}",
+                        related_game=game
+                    )
+
+                     # Acreditar la comisión al admin
+                    admin = User.objects.filter(is_admin=True).first()
+                    if admin:
+                        admin.credit_balance += entry_commission
+                        admin.save()
+                        
+                        Transaction.objects.create(
+                            user=admin,
+                            amount=entry_commission,
+                            transaction_type='ADMIN_ADD',
+                            description=f"Comisión por creación de juego {game.name}",
+                            related_game=game
+                        )
                     
-                    messages.success(request, '¡Juego creado exitosamente!')
+                    messages.success(request, f'¡Juego creado exitosamente! Se cobró una comisión de {entry_commission} créditos ({entry_commission_percentage}%)')
                     return redirect('game_room', game_id=game.id)
                     
             except Exception as e:
@@ -125,7 +156,8 @@ def create_game(request):
     
     return render(request, 'bingo_app/create_game.html', {
         'form': form,
-        'current_balance': request.user.credit_balance
+        'current_balance': request.user.credit_balance,
+        'percentage_settings': PercentageSettings.objects.first()
     })
 
 @login_required
@@ -144,33 +176,6 @@ def game_room(request, game_id):
         return redirect('lobby')
     
     # Handle new player joining
-    if created:
-        # Verificar si el usuario es el organizador del juego
-        is_organizer = request.user == game.organizer
-        
-        if not is_organizer and request.user.credit_balance < game.entry_price:
-            messages.error(request, f'Saldo insuficiente. Necesitas {game.entry_price} créditos para unirte')
-            return redirect('lobby')
-        
-        try:
-            with transaction.atomic():
-                # Solo cobrar entrada si NO es el organizador
-                if is_organizer:
-                    # Charge entry fee
-                    request.user.credit_balance -= game.entry_price
-                    request.user.save()
-                    
-                    # Record transaction
-                    Transaction.objects.create(
-                        user=request.user,
-                        amount=-game.entry_price,
-                        transaction_type='PURCHASE',
-                        description=f"Comision por crear partida: {game.name}",
-                        related_game=game
-                    )                
-        except Exception as e:
-            messages.error(request, f'Error al unirse a la partida: {str(e)}')
-            return redirect('lobby')
 
     # Handle card purchases
     if request.method == 'POST' and 'buy_card' in request.POST and not game.is_started:
@@ -898,33 +903,63 @@ def create_raffle(request):
     if request.method == 'POST':
         form = RaffleForm(request.POST)
         if form.is_valid():
-            raffle = form.save(commit=False)
+            # Obtener configuración de porcentajes
+            percentage_settings = PercentageSettings.objects.first()
+            entry_commission_percentage = percentage_settings.entry_commission if percentage_settings else 5.00
             
-            # Verificar que el organizador tenga suficiente saldo para el premio
-            if request.user.credit_balance < raffle.prize:
-                messages.error(request, f'Saldo insuficiente. Necesitas {raffle.prize} créditos para establecer este premio')
+            prize = form.cleaned_data['prize']
+            entry_commission = (prize * entry_commission_percentage) / 100
+            total_cost = prize + entry_commission
+            
+            # Verificar saldo suficiente (premio + comisión)
+            if request.user.credit_balance < total_cost:
+                messages.error(request, f'Saldo insuficiente. Necesitas {total_cost} créditos (premio: {prize} + comisión: {entry_commission})')
                 return render(request, 'bingo_app/create_raffle.html', {'form': form})
             
             try:
                 with transaction.atomic():
-                    # Descontar el premio del saldo del organizador
-                    request.user.credit_balance -= raffle.prize
+                    # Descontar premio y comisión del organizador
+                    request.user.credit_balance -= total_cost
                     request.user.save()
                     
                     # Crear la rifa
+                    raffle = form.save(commit=False)
                     raffle.organizer = request.user
                     raffle.save()
                     
-                    # Registrar la transacción
+                    # Registrar transacción del premio
                     Transaction.objects.create(
                         user=request.user,
-                        amount=-raffle.prize,
-                        transaction_type='PURCHASE',
+                        amount=-prize,
+                        transaction_type='PRIZE',
                         description=f"Premio para rifa {raffle.title}",
                         related_game=None
                     )
                     
-                    messages.success(request, '¡Rifa creada exitosamente!')
+                    # Registrar transacción de la comisión
+                    Transaction.objects.create(
+                        user=request.user,
+                        amount=-entry_commission,
+                        transaction_type='ENTRY_COMMISSION',
+                        description=f"Comisión por creación de rifa {raffle.title}",
+                        related_game=None
+                    )
+                    
+                    # Acreditar la comisión al admin
+                    admin = User.objects.filter(is_admin=True).first()
+                    if admin:
+                        admin.credit_balance += entry_commission
+                        admin.save()
+                        
+                        Transaction.objects.create(
+                            user=admin,
+                            amount=entry_commission,
+                            transaction_type='ADMIN_ADD',
+                            description=f"Comisión por creación de rifa {raffle.title}",
+                            related_game=None
+                        )
+                    
+                    messages.success(request, f'¡Rifa creada exitosamente! Se cobró una comisión de {entry_commission} créditos ({entry_commission_percentage}%)')
                     return redirect('raffle_detail', raffle_id=raffle.id)
                     
             except Exception as e:

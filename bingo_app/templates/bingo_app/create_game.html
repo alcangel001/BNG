@@ -317,6 +317,13 @@
                         </div>
 
                         <!-- Premio y Precios -->
+                         <div class="commission-info mb-4 p-3 bg-light rounded">
+                            <h5><i class="fas fa-info-circle me-2"></i>Información de Comisiones</h5>
+                            <p class="mb-0">
+                                Se cobrará una comisión del <strong>{{ percentage_settings.entry_commission|default:5 }}%</strong> 
+                                sobre el premio base al crear el juego.
+                            </p>
+                        </div>
                         <div class="row mb-4">
                             <div class="col-md-4 mb-3">
                                 <label for="id_base_prize" class="form-label">Premio base (créditos)*</label>
@@ -332,17 +339,8 @@
                                 <div class="form-text">Premio inicial del juego</div>
                             </div>
                             <div class="col-md-4 mb-3">
-                                <label for="id_entry_price" class="form-label">Precio de entrada*</label>
-                                <div class="input-group price-input">
-                                    <span class="input-group-text"><i class="fas fa-ticket-alt"></i></span>
-                                    <input type="number" class="form-control {% if form.entry_price.errors %}is-invalid{% endif %}" 
-                                           id="id_entry_price" name="entry_price" min="0.5" step="0.5" 
-                                           value="{{ form.entry_price.value|default:'5.00' }}" required>
-                                </div>
-                                {% for error in form.entry_price.errors %}
-                                    <div class="error-message">{{ error }}</div>
-                                {% endfor %}
-                                <div class="form-text">Costo para unirse a la partida</div>
+        
+                               
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label for="id_card_price" class="form-label">Precio por cartón extra*</label>

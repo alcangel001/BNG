@@ -732,8 +732,18 @@ class PercentageSettings(models.Model):
     admin_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=10.00, validators=[MinValueValidator(0), MaxValueValidator(100)])
     organizer_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=20.00, validators=[MinValueValidator(0), MaxValueValidator(100)])
     player_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=70.00, validators=[MinValueValidator(0), MaxValueValidator(100)])
+
+    entry_commission = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2, 
+        default=5.00,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        verbose_name="Comisión por creación de juego (%)"
+    )
+    
     last_updated = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+
 
     class Meta:
         verbose_name_plural = "Percentage Settings"

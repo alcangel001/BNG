@@ -10,36 +10,77 @@
             <form method="post">
                 {% csrf_token %}
                 <div class="row mb-3">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label">Administrador</label>
                         <div class="input-group">
-                            {{ form.admin_percentage }}
+                            <input type="number" name="admin_percentage" class="form-control" 
+                                   value="{{ form.admin_percentage.value|default:settings.admin_percentage }}" 
+                                   step="0.01" min="0" max="100" required>
                             <span class="input-group-text">%</span>
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label">Organizador</label>
                         <div class="input-group">
-                            {{ form.organizer_percentage }}
+                            <input type="number" name="organizer_percentage" class="form-control" 
+                                   value="{{ form.organizer_percentage.value|default:settings.organizer_percentage }}" 
+                                   step="0.01" min="0" max="100" required>
                             <span class="input-group-text">%</span>
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label">Jugador</label>
                         <div class="input-group">
-                            {{ form.player_percentage }}
+                            <input type="number" name="player_percentage" class="form-control" 
+                                   value="{{ form.player_percentage.value|default:settings.player_percentage }}" 
+                                   step="0.01" min="0" max="100" required>
                             <span class="input-group-text">%</span>
                         </div>
                     </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Comisión de Entrada</label>
+                        <div class="input-group">
+                            <input type="number" name="entry_commission" class="form-control" 
+                                   value="{{ form.entry_commission.value|default:settings.entry_commission }}" 
+                                   step="0.01" min="0" max="100" required>
+                            <span class="input-group-text">%</span>
+                        </div>
+                        <small class="text-muted">Cobrada al crear juego/rifa</small>
+                    </div>
                 </div>
+                
                 <div class="alert alert-info">
                     <i class="fas fa-info-circle me-2"></i>
-                    La suma total debe ser exactamente 100%. Actual: 
-                    <strong id="total-percentage">{{ settings.admin_percentage|add:settings.organizer_percentage|add:settings.player_percentage }}%</strong>
+                    La suma de los porcentajes de premios (Admin + Organizador + Jugador) debe ser exactamente 100%. 
+                    Actual: <strong id="total-percentage">{{ settings.admin_percentage|add:settings.organizer_percentage|add:settings.player_percentage }}%</strong>
                 </div>
+                
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    La <strong>Comisión de Entrada</strong> es un porcentaje adicional que se cobra al organizador 
+                    sobre el premio base cuando crea un juego o rifa. Este valor no afecta la distribución del premio.
+                </div>
+                
+                {% if form.errors %}
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <strong>Errores:</strong>
+                    <ul class="mb-0">
+                        {% for field, errors in form.errors.items %}
+                            {% for error in errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-save me-2"></i>Guardar Cambios
                 </button>
+                <a href="{% url 'lobby' %}" class="btn btn-secondary ms-2">
+                    <i class="fas fa-arrow-left me-2"></i>Volver
+                </a>
             </form>
         </div>
         <div class="card-footer text-muted">
@@ -50,20 +91,81 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const inputs = document.querySelectorAll('input[type="number"]');
+    // Seleccionar todos los inputs de porcentaje (excluyendo la comisión)
+    const percentageInputs = [
+        document.querySelector('input[name="admin_percentage"]'),
+        document.querySelector('input[name="organizer_percentage"]'),
+        document.querySelector('input[name="player_percentage"]')
+    ];
+    
+    const commissionInput = document.querySelector('input[name="entry_commission"]');
+    const totalDisplay = document.getElementById('total-percentage');
+    const totalAlert = totalDisplay.closest('.alert');
     
     function calculateTotal() {
         let total = 0;
-        inputs.forEach(input => {
+        percentageInputs.forEach(input => {
             total += parseFloat(input.value) || 0;
         });
-        document.getElementById('total-percentage').textContent = total.toFixed(2) + '%';
+        totalDisplay.textContent = total.toFixed(2) + '%';
+        
+        // Validación visual
+        if (Math.abs(total - 100) > 0.01) {
+            totalAlert.classList.remove('alert-info');
+            totalAlert.classList.add('alert-danger');
+        } else {
+            totalAlert.classList.remove('alert-danger');
+            totalAlert.classList.add('alert-info');
+        }
     }
     
-    inputs.forEach(input => {
-        input.addEventListener('change', calculateTotal);
+    function validateInput(input) {
+        const value = parseFloat(input.value) || 0;
+        if (value < 0 || value > 100) {
+            input.classList.add('is-invalid');
+        } else {
+            input.classList.remove('is-invalid');
+        }
+    }
+    
+    // Event listeners para los porcentajes de premios
+    percentageInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            validateInput(this);
+            calculateTotal();
+        });
         input.addEventListener('input', calculateTotal);
     });
+    
+    // Event listeners para la comisión
+    commissionInput.addEventListener('change', function() {
+        validateInput(this);
+    });
+    
+    // Calcular y validar al cargar la página
+    percentageInputs.forEach(validateInput);
+    validateInput(commissionInput);
+    calculateTotal();
 });
 </script>
+
+<style>
+.input-group-text {
+    min-width: 40px;
+    justify-content: center;
+}
+.is-invalid {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
+}
+.alert-danger {
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+}
+.form-label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+</style>
 {% endblock %}

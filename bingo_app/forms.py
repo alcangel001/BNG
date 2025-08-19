@@ -24,7 +24,7 @@ class GameForm(forms.ModelForm):
     
     class Meta:
         model = Game
-        fields = ['name', 'password', 'entry_price', 'card_price', 
+        fields = ['name', 'password', 'card_price', 
                  'max_cards_per_player', 'winning_pattern',
                 'base_prize', 'auto_call_interval', 'progressive_prizes','custom_pattern']
     
@@ -150,7 +150,7 @@ class BuyTicketForm(forms.Form):
 class PercentageSettingsForm(forms.ModelForm):
     class Meta:
         model = PercentageSettings
-        fields = ['admin_percentage', 'organizer_percentage', 'player_percentage']
+        fields = ['admin_percentage', 'organizer_percentage', 'player_percentage', 'entry_commission']
         widgets = {
             'admin_percentage': forms.NumberInput(attrs={
                 'step': '0.01',
@@ -167,12 +167,19 @@ class PercentageSettingsForm(forms.ModelForm):
                 'min': '0',
                 'max': '100'
             }),
+            'entry_commission': forms.NumberInput(attrs={
+                'step': '0.01',
+                'min': '0',
+                'max': '100'
+            }),
         }
         labels = {
             'admin_percentage': 'Porcentaje administrador (%)',
             'organizer_percentage': 'Porcentaje organizador (%)',
-            'player_percentage': 'Porcentaje jugador (%)'
+            'player_percentage': 'Porcentaje jugador (%)',
+            'entry_commission': 'Comisión por creación de juego (%)'
         }
+        
 
     def clean(self):
         cleaned_data = super().clean()
