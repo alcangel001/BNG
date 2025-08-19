@@ -16,6 +16,32 @@
         transition: all 0.3s ease;
     }
 
+    .pattern-grid {
+    border-collapse: collapse;
+    margin: 0 auto;
+}
+
+    .pattern-cell {
+        width: 40px;
+        height: 40px;
+        border: 2px solid #dee2e6;
+        text-align: center;
+        vertical-align: middle;
+        font-weight: bold;
+        font-size: 1.2rem;
+    }
+
+    .pattern-cell.required {
+        background-color: rgba(231, 76, 60, 0.2);
+        color: var(--accent-color);
+        border-color: var(--accent-color);
+    }
+
+    .pattern-icon {
+        color: var(--primary-color);
+    }
+
+
     .bingo-letter {
     background-color: var(--accent-color);
     color: black;
@@ -581,6 +607,53 @@
                 {% endif %}
             </div>
         </div>
+
+    <div class="card shadow mb-4">
+    <div class="card-header bg-info text-white">
+        <h3 class="mb-0"><i class="fas fa-chess-board me-2"></i>Patrón Ganador</h3>
+    </div>
+    <div class="card-body text-center">
+        {% if game.winning_pattern == 'CUSTOM' and game.custom_pattern %}
+            <!-- Mostrar patrón personalizado -->
+            <h5 class="mb-3">Patrón Personalizado</h5>
+            <div class="pattern-display mb-3">
+                <table class="pattern-grid mx-auto">
+                    {% for row in game.custom_pattern %}
+                    <tr>
+                        {% for cell in row %}
+                        <td class="pattern-cell {% if cell == 1 %}required{% endif %}">
+                            {% if cell == 1 %}✓{% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+            <p class="text-muted small">Las casillas marcadas (✓) son necesarias para ganar</p>
+        {% else %}
+            <!-- Mostrar descripción del patrón predefinido -->
+            <div class="pattern-icon mb-3">
+                {% if game.winning_pattern == 'HORIZONTAL' %}
+                    <i class="fas fa-grip-lines fa-3x"></i>
+                    <p class="mt-2">Línea horizontal completa</p>
+                {% elif game.winning_pattern == 'VERTICAL' %}
+                    <i class="fas fa-grip-lines-vertical fa-3x"></i>
+                    <p class="mt-2">Línea vertical completa</p>
+                {% elif game.winning_pattern == 'DIAGONAL' %}
+                    <i class="fas fa-times fa-3x"></i>
+                    <p class="mt-2">Línea diagonal (X)</p>
+                {% elif game.winning_pattern == 'FULL' %}
+                    <i class="fas fa-border-all fa-3x"></i>
+                    <p class="mt-2">Cartón completo</p>
+                {% elif game.winning_pattern == 'CORNERS' %}
+                    <i class="fas fa-vector-square fa-3x"></i>
+                    <p class="mt-2">Cuatro esquinas</p>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+
 
         <!-- Panel de créditos y compra de cartones -->
         <div class="credit-panel mb-4">

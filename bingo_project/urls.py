@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.urls import path, include, re_path
+from django.urls import path, include, re_path, reverse_lazy
 from django.contrib.auth import views as auth_views
 from django.conf import settings
 from django.conf.urls.static import static
@@ -15,7 +15,8 @@ urlpatterns = [
         redirect_authenticated_user=False,
         next_page='lobby'
     ), name='login'),
-    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    path('logout/', auth_views.LogoutView.as_view(next_page=reverse_lazy('login')
+    ), name='logout'),
     path('password-reset/', auth_views.PasswordResetView.as_view(
         template_name='bingo_app/password_reset.html'
     ), name='password_reset'),

@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.core.validators import MinValueValidator
+from django.core.exceptions import ValidationError
 import json
 from .models import BankAccount, User, Game, CreditRequest, Raffle, PercentageSettings, WithdrawalRequest
 
@@ -9,6 +10,19 @@ class RegistrationForm(UserCreationForm):
         required=False,
         label='¿Eres un organizador? (Puedes crear juegos)'
     )
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if email:
+            # Verificar si el correo ya existe (case-insensitive)
+            if User.objects.filter(email__iexact=email).exists():
+                raise ValidationError('Este correo electrónico ya está registrado. Por favor utiliza otro.')
+        return email
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Agregar validación de email como campo requerido
+        self.fields['email'].required = True
 
     class Meta:
         model = User
@@ -63,8 +77,6 @@ class GameForm(forms.ModelForm):
                     cleaned_data['custom_pattern'] = pattern_data
                 except json.JSONDecodeError:
                     raise forms.ValidationError("El archivo debe ser un JSON válido")
-        
-        
         
         # Procesar premios progresivos
         progressive_prizes_json = self.data.get('progressive_prizes_json')

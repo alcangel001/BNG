@@ -367,6 +367,19 @@
                                 <span class="feature-label">Jugadores:</span>
                                 <span class="feature-value">{{ game.player_set.count }}</span>
                             </div>
+
+                            <div class="game-feature">
+                                <i class="fas fa-chess-board"></i>
+                                <span class="feature-label">Patrón ganador:</span>
+                                <span class="feature-value">
+                                    {% if game.winning_pattern == 'CUSTOM' %}
+                                        Personalizado
+                                    {% else %}
+                                        {{ game.get_winning_pattern_display }}
+                                    {% endif %}
+                                </span>
+                            </div>
+
                             
                             <div class="game-feature">
                                 <i class="fas fa-trophy"></i>
